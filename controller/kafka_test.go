@@ -11,7 +11,7 @@ import (
 
 func Test_kafka(t *testing.T) {
 	//consumer, err := NewConsumer([]string{"datahunter.cn:16080"}, nil)
-	consumer, err := NewConsumer([]string{"localhost:9092"}, nil)
+	consumer, err := NewConsumer([]string{"localhost:2181"}, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -22,7 +22,7 @@ func Test_kafka(t *testing.T) {
 		}
 	}()
 
-	partitionConsumer, err := consumer.ConsumePartition("go_topic", 0, OffsetNewest)
+	partitionConsumer, err := consumer.ConsumePartition("go_topic", 0, OffsetOldest)
 	if err != nil {
 		panic(err)
 	}
