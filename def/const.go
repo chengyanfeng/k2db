@@ -1,6 +1,7 @@
 package def
 
 import (
+	"github.com/jinzhu/gorm"
 	"github.com/nanobox-io/golang-scribble"
 	"github.com/orcaman/concurrent-map"
 	"gopkg.in/robfig/cron.v2"
@@ -10,6 +11,7 @@ import (
 var Cron *cron.Cron
 var Cmap cmap.ConcurrentMap = cmap.New()
 var Db *scribble.Driver
+var Stream *gorm.DB
 var UPTIME = time.Now().UnixNano() / int64(time.Millisecond)
 
 const (

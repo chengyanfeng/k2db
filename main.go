@@ -2,13 +2,14 @@ package main
 
 import (
 	. "datahunter.cn/util"
-	. "k2db/controller"
-	//. "k2db/def"
-	//"encoding/json"
 	. "github.com/Shopify/sarama"
 	"github.com/astaxie/beego"
+	. "k2db/controller"
+	. "k2db/def"
+	. "k2db/util"
 	//"github.com/nanobox-io/golang-scribble"
-	//"gopkg.in/robfig/cron.v2"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"log"
 	"os"
 	"os/signal"
@@ -22,6 +23,12 @@ func main() {
 	//beego.SetLogger("file", `{"filename":"logs/run.log"}`)
 	//beego.BeeLogger.SetLogFuncCallDepth(4)
 	//Db, _ = scribble.New("cron", nil)
+	var err error
+	Stream, err = gorm.Open("postgres", "host=localhost user=dh dbname=dh sslmode=disable password=")
+	defer Stream.Close()
+	if err != nil {
+		panic(err)
+	}
 	go loadJob()
 	beego.Run()
 }
@@ -78,5 +85,21 @@ func LoadOffset() int64 {
 }
 
 func ProcMsg(msg *ConsumerMessage) {
+	// todo: parse msg and insert into pg
+	parser := LogParser{}
+	t := string(msg.Value)
+	p := parser.Parse(t)
 	Debug("Consumed ", msg.Offset, string(msg.Value))
+	InsertDb(p)
+}
+
+func InsertDb(p *P) {
+	v := *p
+	err := Stream.Exec(`insert into s_log () values (?,?,?,?)`,
+		v[""]).Error
+	if err != nil {
+		Error(err)
+	} else {
+		// todo: save kafka offset
+	}
 }
