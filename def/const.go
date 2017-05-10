@@ -8,7 +8,7 @@ import (
 )
 
 var Cron *cron.Cron
-var Cmap cmap.ConcurrentMap
+var Cmap cmap.ConcurrentMap = cmap.New()
 var Db *scribble.Driver
 var UPTIME = time.Now().UnixNano() / int64(time.Millisecond)
 
