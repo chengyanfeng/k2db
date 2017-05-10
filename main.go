@@ -4,12 +4,12 @@ import (
 	. "datahunter.cn/util"
 	. "github.com/Shopify/sarama"
 	"github.com/astaxie/beego"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/nanobox-io/golang-scribble"
 	. "k2db/controller"
 	. "k2db/def"
 	. "k2db/util"
-	//"github.com/nanobox-io/golang-scribble"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"log"
 	"os"
 	"os/signal"
@@ -22,7 +22,7 @@ func main() {
 	beego.AutoRouter(&ApiController{})
 	//beego.SetLogger("file", `{"filename":"logs/run.log"}`)
 	//beego.BeeLogger.SetLogFuncCallDepth(4)
-	//Db, _ = scribble.New("cron", nil)
+	LocalDb, _ = scribble.New("log", nil)
 	var err error
 	Stream, err = gorm.Open("postgres", "host=localhost user=dh dbname=dh sslmode=disable password=")
 	defer Stream.Close()
@@ -44,11 +44,12 @@ func loadJob() {
 			log.Fatalln(err)
 		}
 	}()
-	offset := LoadOffset()
-	if offset < 1 {
+	topic := "log_topic"
+	offset := LoadOffset(topic) + 1
+	if offset < 2 {
 		offset = OffsetNewest
 	}
-	logConsumer, err := consumer.ConsumePartition("log_topic", 0, offset)
+	logConsumer, err := consumer.ConsumePartition(topic, 0, offset)
 	if err != nil {
 		panic(err)
 	}
@@ -79,27 +80,35 @@ ConsumerLoop:
 	Debug("Stop consume: %d\n", consumed)
 }
 
-func LoadOffset() int64 {
-	// todo: load offset from local db
-	return 0
-}
-
 func ProcMsg(msg *ConsumerMessage) {
-	// todo: parse msg and insert into pg
 	parser := LogParser{}
 	t := string(msg.Value)
 	p := parser.Parse(t)
-	Debug("Consumed ", msg.Offset, string(msg.Value))
-	InsertDb(p)
-}
-
-func InsertDb(p *P) {
-	v := *p
-	err := Stream.Exec(`insert into s_log () values (?,?,?,?)`,
-		v[""]).Error
+	//Debug("Consumed ", msg.Offset, string(msg.Value))
+	err := InsertDb(p)
 	if err != nil {
 		Error(err)
 	} else {
-		// todo: save kafka offset
+		SaveOffset(msg.Topic, msg.Offset)
+	}
+}
+
+func InsertDb(p *P) error {
+	v := *p
+	return Stream.Exec(`insert into s_log (msg) values (?)`,
+		v["msg"]).Error
+}
+
+func LoadOffset(topic string) int64 {
+	i := int64(0)
+	LocalDb.Read(topic, "offset", &i)
+	Debug("LoadOffset", i)
+	return i
+}
+
+func SaveOffset(topic string, offset int64) {
+	if offset%10000 == 0 {
+		LocalDb.Write(topic, "offset", offset)
+		Debug("SaveOffset", offset)
 	}
 }

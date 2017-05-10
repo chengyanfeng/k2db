@@ -10,7 +10,8 @@ import (
 
 var Cron *cron.Cron
 var Cmap cmap.ConcurrentMap = cmap.New()
-var Db *scribble.Driver
+var LocalDb *scribble.Driver
+
 var Stream *gorm.DB
 var UPTIME = time.Now().UnixNano() / int64(time.Millisecond)
 
