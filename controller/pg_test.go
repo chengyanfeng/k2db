@@ -1,7 +1,7 @@
 package controller
 
 import (
-	. "datahunter.cn/util"
+	. "k2db/util"
 	//. "github.com/Shopify/sarama"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"

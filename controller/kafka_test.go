@@ -1,8 +1,8 @@
 package controller
 
 import (
-	. "datahunter.cn/util"
 	. "github.com/Shopify/sarama"
+	. "k2db/util"
 	"log"
 	"os"
 	"os/signal"
