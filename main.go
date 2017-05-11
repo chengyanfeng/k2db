@@ -20,6 +20,7 @@ func main() {
 	beego.BConfig.RecoverPanic = true
 	beego.BConfig.EnableErrorsShow = true
 	beego.AutoRouter(&ApiController{})
+	beego.AutoRouter(&WsController{})
 	//beego.SetLogger("file", `{"filename":"logs/run.log"}`)
 	//beego.BeeLogger.SetLogFuncCallDepth(4)
 	LocalDb, _ = scribble.New("log", nil)
@@ -30,36 +31,32 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	go loadJob()
-	beego.Run()
-}
-
-func loadJob() {
-	consumer, err := NewConsumer([]string{"kafka:9092"}, nil)
-	if err != nil {
-		panic(err)
-	}
-
+	initConsumer()
 	defer func() {
-		if err := consumer.Close(); err != nil {
+		if err := KafkaConsumer.Close(); err != nil {
 			log.Fatalln(err)
 		}
 	}()
-	topic := "log_topic"
+	go consume("log_topic", ProcLog)
+	go consume("ws_topic", ProcWs)
+	beego.Run()
+}
+
+func consume(topic string, f func(msg *ConsumerMessage)) {
 	go AutoSaveOffset(topic)
 	offset := LoadOffset(topic) + 1
 	if offset < 2 {
 		offset = OffsetNewest
 	}
 	// todo 要考虑分区消费，便于并行处理
-	logConsumer, err := consumer.ConsumePartition(topic, 0, offset)
+	logConsumer, err := KafkaConsumer.ConsumePartition(topic, 0, offset)
 	if err != nil {
 		panic(err)
 	}
 
 	defer func() {
 		if err := logConsumer.Close(); err != nil {
-			log.Fatalln(err)
+			Error(err)
 		}
 	}()
 
@@ -67,28 +64,32 @@ func loadJob() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
 
-	consumed := 0
-	Debug("Consuming...")
+	Debug("Consuming", topic)
 ConsumerLoop:
 	for {
 		select {
 		case msg := <-logConsumer.Messages():
 			// todo 考虑增加任务队列，提高消费速度
-			ProcMsg(msg)
-			consumed++
+			f(msg)
 		case <-signals:
 			break ConsumerLoop
 		}
 	}
-
-	Debug("Stop consume: %d\n", consumed)
 }
 
-func ProcMsg(msg *ConsumerMessage) {
+func initConsumer() {
+	var err error
+	KafkaConsumer, err = NewConsumer([]string{"kafka:9092"}, nil)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func ProcLog(msg *ConsumerMessage) {
 	parser := LogParser{}
 	t := string(msg.Value)
 	p := parser.Parse(t)
-	Debug("Consumed ", msg.Offset, string(msg.Value))
+	//Debug("Consumed ", msg.Offset, string(msg.Value))
 	err := InsertDb(p)
 	if err != nil {
 		Error(err)

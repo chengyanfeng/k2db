@@ -1,0 +1,32 @@
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<script src="http://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js" type="text/javascript"></script>
+<script>
+    var wsServer = 'ws://localhost:7878/ws/join';
+    var websocket = new WebSocket(wsServer);
+    websocket.onopen = function (evt) {
+        console.log("Connected to WebSocket server.");//连接成功
+        var data = {"uid": "test1"};
+        websocket.send(JSON.stringify(data));
+    };
+
+    websocket.onclose = function (evt) {
+        console.log("Disconnected");
+    };
+
+    // 接收到消息
+    websocket.onmessage = function (evt) {
+        var data = evt.data;
+        console.log("onmessage", data);
+        document.write(data);
+    };
+
+    websocket.onerror = function (evt, e) {
+        console.log('Error occured: ' + evt.data);
+    };
+
+</script>
+<br>
+</html>

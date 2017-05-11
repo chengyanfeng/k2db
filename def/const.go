@@ -1,6 +1,7 @@
 package def
 
 import (
+	"github.com/Shopify/sarama"
 	"github.com/jinzhu/gorm"
 	"github.com/nanobox-io/golang-scribble"
 	"github.com/orcaman/concurrent-map"
@@ -11,7 +12,7 @@ import (
 var Cron *cron.Cron
 var Cmap cmap.ConcurrentMap = cmap.New()
 var LocalDb *scribble.Driver
-
+var KafkaConsumer sarama.Consumer
 var Stream *gorm.DB
 var UPTIME = time.Now().UnixNano() / int64(time.Millisecond)
 
