@@ -25,7 +25,7 @@ func main() {
 	LocalDb, _ = scribble.New("log", nil)
 	var err error
 	// todo 配置通过文件读取
-	Stream, err = gorm.Open("postgres", "host=localhost user=dh dbname=dh sslmode=disable password=")
+	Stream, err = gorm.Open("postgres", "host=pipeline user=dh dbname=dh sslmode=disable password=")
 	defer Stream.Close()
 	if err != nil {
 		panic(err)
