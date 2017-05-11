@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"time"
 )
 
 func main() {
@@ -45,6 +46,7 @@ func loadJob() {
 		}
 	}()
 	topic := "log_topic"
+	go AutoSaveOffset(topic)
 	offset := LoadOffset(topic) + 1
 	if offset < 2 {
 		offset = OffsetNewest
@@ -91,7 +93,7 @@ func ProcMsg(msg *ConsumerMessage) {
 	if err != nil {
 		Error(err)
 	} else {
-		SaveOffset(msg.Topic, msg.Offset)
+		Cmap.Set(msg.Topic, msg.Offset)
 	}
 }
 
@@ -104,14 +106,23 @@ func InsertDb(p *P) error {
 func LoadOffset(topic string) int64 {
 	i := int64(0)
 	LocalDb.Read(topic, "offset", &i)
-	Debug("LoadOffset", i)
+	//Debug("LoadOffset", i)
 	return i
 }
 
 func SaveOffset(topic string, offset int64) {
-	// todo 优化存储方式，按照每隔1s定期记录
-	if offset%10000 == 0 {
-		LocalDb.Write(topic, "offset", offset)
-		Debug("SaveOffset", offset)
+	LocalDb.Write(topic, "offset", offset)
+	Debug("SaveOffset", offset)
+}
+
+func AutoSaveOffset(topic string) {
+	for {
+		time.Sleep(time.Duration(1 * time.Second))
+		old := LoadOffset(topic)
+		tmp, _ := Cmap.Get(topic)
+		offset := ToInt64(tmp)
+		if offset > old {
+			SaveOffset(topic, offset)
+		}
 	}
 }
