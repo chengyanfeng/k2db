@@ -1,11 +1,11 @@
 package controller
 
 import (
-	. "datahunter.cn/util"
 	"fmt"
 	"github.com/astaxie/beego"
 	"gopkg.in/mgo.v2/bson"
 	. "k2db/def"
+	. "k2db/util"
 )
 
 type BaseController struct {

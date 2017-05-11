@@ -1,9 +1,9 @@
 package controller
 
 import (
-	. "datahunter.cn/util"
 	"github.com/astaxie/beego"
 	. "k2db/def"
+	. "k2db/util"
 	"os"
 	"runtime"
 )
