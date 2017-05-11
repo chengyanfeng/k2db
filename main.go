@@ -24,6 +24,7 @@ func main() {
 	//beego.BeeLogger.SetLogFuncCallDepth(4)
 	LocalDb, _ = scribble.New("log", nil)
 	var err error
+	// todo 配置通过文件读取
 	Stream, err = gorm.Open("postgres", "host=localhost user=dh dbname=dh sslmode=disable password=")
 	defer Stream.Close()
 	if err != nil {
@@ -49,6 +50,7 @@ func loadJob() {
 	if offset < 2 {
 		offset = OffsetNewest
 	}
+	// todo 要考虑分区消费，便于并行处理
 	logConsumer, err := consumer.ConsumePartition(topic, 0, offset)
 	if err != nil {
 		panic(err)
@@ -70,6 +72,7 @@ ConsumerLoop:
 	for {
 		select {
 		case msg := <-logConsumer.Messages():
+			// todo 考虑增加任务队列，提高消费速度
 			ProcMsg(msg)
 			consumed++
 		case <-signals:
@@ -84,7 +87,7 @@ func ProcMsg(msg *ConsumerMessage) {
 	parser := LogParser{}
 	t := string(msg.Value)
 	p := parser.Parse(t)
-	//Debug("Consumed ", msg.Offset, string(msg.Value))
+	Debug("Consumed ", msg.Offset, string(msg.Value))
 	err := InsertDb(p)
 	if err != nil {
 		Error(err)
@@ -107,6 +110,7 @@ func LoadOffset(topic string) int64 {
 }
 
 func SaveOffset(topic string, offset int64) {
+	// todo 优化存储方式，按照每隔1s定期记录
 	if offset%10000 == 0 {
 		LocalDb.Write(topic, "offset", offset)
 		Debug("SaveOffset", offset)
