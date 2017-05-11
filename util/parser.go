@@ -1,7 +1,5 @@
 package util
 
-import . "datahunter.cn/util"
-
 type LogParser struct {
 }
 

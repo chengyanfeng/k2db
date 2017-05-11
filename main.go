@@ -1,7 +1,6 @@
 package main
 
 import (
-	. "datahunter.cn/util"
 	. "github.com/Shopify/sarama"
 	"github.com/astaxie/beego"
 	"github.com/jinzhu/gorm"
