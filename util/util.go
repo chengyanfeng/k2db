@@ -155,11 +155,6 @@ func IsFloat(s interface{}) bool {
 	return e == nil
 }
 
-func IsDate(s interface{}) bool {
-	_, e := ToDate(ToString(s))
-	return e == nil
-}
-
 func Md5(s ...interface{}) (r string) {
 	return Hash("md5", s...)
 }
@@ -206,9 +201,10 @@ func DateTimeStr() string {
 	return time.Now().Format("2006/01/02 15:04:05")
 }
 
-func ToDate(s string) (str string, e error) {
+func ToTime(s string) (t time.Time, e error) {
 	fmt := []string{"2006-01-02 15:04:05",
 		"2006-01-02T15:04:05",
+		"02/Jan/2006:15:04:05 -0700",
 		"2006/01/02 15:04:05",
 		"15:04:05",
 		"15:04",
@@ -218,14 +214,13 @@ func ToDate(s string) (str string, e error) {
 		"01-02-06",
 		"2006年01月02日 15:04:05",
 		"2006年01月02日"}
-	var t time.Time
 	for _, f := range fmt {
 		t, e = time.Parse(f, s)
 		if e == nil {
-			return t.Format("2006-01-02 15:04:05"), e
+			return t, e
 		}
 	}
-	return s, e
+	return
 }
 
 func InArray(s string, a []string) bool {
