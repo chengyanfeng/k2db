@@ -14,6 +14,7 @@ var Cmap cmap.ConcurrentMap = cmap.New()
 var LocalDb *scribble.Driver
 var KafkaConsumer sarama.Consumer
 var Stream *gorm.DB
+var Citus *gorm.DB
 var UPTIME = time.Now().UnixNano() / int64(time.Millisecond)
 
 const (
