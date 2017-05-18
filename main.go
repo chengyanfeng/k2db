@@ -8,6 +8,7 @@ import (
 	"github.com/nanobox-io/golang-scribble"
 	. "k2db/controller"
 	. "k2db/def"
+	. "k2db/task"
 	. "k2db/util"
 	"log"
 	"os"
@@ -27,8 +28,12 @@ func main() {
 	var err error
 	// todo 配置通过文件读取
 	Stream, err = gorm.Open("postgres", "host=pipeline user=dh dbname=dh sslmode=disable password=")
-	Citus, err = gorm.Open("postgres", "host=citus user=postgres dbname=postgres sslmode=disable password=")
 	defer Stream.Close()
+	if err != nil {
+		panic(err)
+	}
+	Citus, err = gorm.Open("postgres", "host=citus user=postgres dbname=postgres sslmode=disable password=")
+	defer Citus.Close()
 	if err != nil {
 		panic(err)
 	}
@@ -52,7 +57,8 @@ func consume(topic string, f func(msg *ConsumerMessage)) {
 	// todo 要考虑分区消费，便于并行处理
 	logConsumer, err := KafkaConsumer.ConsumePartition(topic, 0, offset)
 	if err != nil {
-		panic(err)
+		Error(err)
+		logConsumer, err = KafkaConsumer.ConsumePartition(topic, 0, OffsetNewest)
 	}
 
 	defer func() {
@@ -70,8 +76,9 @@ ConsumerLoop:
 	for {
 		select {
 		case msg := <-logConsumer.Messages():
-			// todo 考虑增加任务队列，提高消费速度
-			f(msg)
+			Dhq <- func() {
+				f(msg)
+			}
 		case <-signals:
 			break ConsumerLoop
 		}
@@ -99,10 +106,20 @@ func ProcLog(msg *ConsumerMessage) {
 	}
 }
 
-func InsertDb(p *P) error {
+func InsertDb(p *P) (e error) {
 	v := *p
-	return Stream.Exec(`insert into s_log (msg) values (?)`,
+	// todo
+	e = Stream.Exec(`insert into s_log (msg) values (?)`,
 		v["msg"]).Error
+	if e != nil {
+		return
+	}
+	e = Citus.Exec(`insert into t_userlog (msg) values (?)`,
+		v["msg"]).Error
+	if e != nil {
+		return
+	}
+	return
 }
 
 func LoadOffset(topic string) int64 {
@@ -123,7 +140,7 @@ func AutoSaveOffset(topic string) {
 		old := LoadOffset(topic)
 		tmp, _ := Cmap.Get(topic)
 		offset := ToInt64(tmp)
-		if offset > old {
+		if offset != old {
 			SaveOffset(topic, offset)
 		}
 	}

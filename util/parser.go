@@ -3,6 +3,7 @@ package util
 import (
 	"net/url"
 	"strings"
+	"time"
 )
 
 type LogParser struct {
@@ -43,8 +44,12 @@ func (this *LogParser) Parse(msg string) *P {
 	}
 	//Debug(len(seg), JsonEncode(seg))
 	p := P{}
+	if len(seg) != 14 {
+		Error("Invalid msg", msg)
+		return &p
+	}
 	p["ct"], _ = ToTime(ToString(seg[0])) // 服务器时间戳
-	p["time"] = ToFloat(seg[1])           // 会话持续时间
+	p["dur"] = ToFloat(seg[1])            // 会话持续时间
 	p["client"] = seg[2]                  // 客户端IP
 	p["code"] = seg[3]                    // HTTP返回值
 	p["auth"] = seg[4]                    // 鉴权成功失败
@@ -52,15 +57,17 @@ func (this *LogParser) Parse(msg string) *P {
 	p["down"] = seg[6]                    // 下行字节
 	p["method"] = seg[7]                  // 请求方法（GET POST）
 	p["url"] = seg[8]                     // URL
-	this.ParseUrl(p)                      // URL
 	p["refer"] = seg[9]                   // httpreferer
 	p["ua"] = seg[10]                     // useragent
 	p["hit"] = seg[11]                    // 命中
 	p["rrange"] = seg[12]                 // 请求range
 	p["frange"] = seg[13]                 // 返回range
+	this.ParseUrl(p)
+	this.ParseBandwidth(p)
 	return &p
 }
 
+// 解析url
 func (this *LogParser) ParseUrl(p P) {
 	u, err := url.Parse(ToString(p["url"]))
 	if err != nil {
@@ -93,4 +100,14 @@ func (this *LogParser) ParseUrl(p P) {
 	p["tradeid"] = m["tradeid"][0]   //
 	p["lsttm"] = m["lsttm"][0]       //
 	delete(p, "url")
+}
+
+func (this *LogParser) ParseBandwidth(p P) {
+	// todo
+	ct := p["ct"].(time.Time)
+	dur := p["dur"].(float64)
+	st := ct.Add(time.Duration(1 * time.Second))
+	p["st"] = st
+	bw := ToFloat(p["down"]) / dur
+	p["bw"] = bw
 }
