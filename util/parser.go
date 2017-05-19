@@ -106,8 +106,8 @@ func (this *LogParser) ParseBandwidth(p P) {
 	// todo
 	ct := p["ct"].(time.Time)
 	dur := p["dur"].(float64)
-	st := ct.Add(time.Duration(1 * time.Second))
+	st := ct.Add(time.Duration(dur) * time.Second)
 	p["st"] = st
-	bw := ToFloat(p["down"]) / dur
+	bw := ToFloat(p["down"]) * 8 / dur
 	p["bw"] = bw
 }
