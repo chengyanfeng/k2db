@@ -17,6 +17,13 @@ type User struct {
 	Price float32
 }
 
+func init() {
+	var err error
+	Stream, err = gorm.Open("postgres", "host=localhost user=dh dbname=dh sslmode=disable password=")
+	//defer Stream.Close()
+	Error(err)
+}
+
 func Test_Pg(t *testing.T) {
 	db, err := gorm.Open("postgres", "host=localhost user=dh dbname=dh sslmode=disable password=")
 	db.SingularTable(true)
@@ -24,6 +31,7 @@ func Test_Pg(t *testing.T) {
 	Error(err)
 
 	db.Exec(`drop stream s_demo`)
+	db.Exec(`drop continous view v_demo`)
 	db.Exec(`create stream s_demo (id int, name text, birth timestamp, price float)`)
 	db.Exec(`create continuous view v_demo as select count(*),birth from s_demo group by birth`)
 
@@ -32,6 +40,13 @@ func Test_Pg(t *testing.T) {
 		db.Exec(`insert into s_demo values (?,?,?,?)`, i, name, time.Now(), float32(i))
 	}
 
+}
+
+func BenchmarkPipeline(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		name := JoinStr("name", i)
+		Stream.Exec(`insert into s_demo values (?,?,?,?)`, i, name, time.Now(), float32(i))
+	}
 }
 
 func Test_Pg2(t *testing.T) {
