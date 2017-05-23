@@ -6,6 +6,7 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	. "k2db/def"
+	"pc.cn/task"
 	"testing"
 	"time"
 )
@@ -45,7 +46,9 @@ func Test_Pg(t *testing.T) {
 func BenchmarkPipeline(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		name := JoinStr("name", i)
-		Stream.Exec(`insert into s_demo values (?,?,?,?)`, i, name, time.Now(), float32(i))
+		task.Dhq <- func() {
+			Stream.Exec(`insert into s_demo values (?,?,?,?)`, i, name, time.Now(), float32(i))
+		}
 	}
 }
 
