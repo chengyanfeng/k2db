@@ -48,20 +48,20 @@ func (this *LogParser) Parse(msg string) *P {
 		Error("Invalid msg", msg)
 		return &p
 	}
-	p["ct"], _ = ToTime(ToString(seg[0])) // 服务器时间戳
-	p["dur"] = ToFloat(seg[1])            // 会话持续时间
-	p["client"] = seg[2]                  // 客户端IP
-	p["code"] = seg[3]                    // HTTP返回值
-	p["auth"] = seg[4]                    // 鉴权成功失败
-	p["up"] = seg[5]                      // 上行字节
-	p["down"] = seg[6]                    // 下行字节
-	p["method"] = seg[7]                  // 请求方法（GET POST）
-	p["url"] = seg[8]                     // URL
-	p["refer"] = seg[9]                   // httpreferer
-	p["ua"] = seg[10]                     // useragent
-	p["hit"] = seg[11]                    // 命中
-	p["rrange"] = seg[12]                 // 请求range
-	p["frange"] = seg[13]                 // 返回range
+	p["time_local"], _ = ToTime(ToString(seg[0])) // 本地时间
+	p["request_time"] = ToFloat(seg[1])            // 服务时间
+	p["remote_addr"] = seg[2]                  // 远端地址（客户端地址）
+	p["status"] = seg[3]                    // HTTP回复状态码
+	p["err_code"] = seg[4]                    // 错误码
+	p["request_length"] = seg[5]                      // 请求长度
+	p["bytes_sent"] = seg[6]                    // 发送长度
+	p["request_method"] = seg[7]                  // 请求方式
+	p["url"] = seg[8]                     // 完整请求链接
+	p["http_referer"] = seg[9]                   // HTTP_REFERER
+	p["http_user_agent"] = seg[10]                     // USERAGENT
+	p["cache_status"] = seg[11]                    // 缓存状态（MISS HIT IOTHROUGH）
+	p["http_range"] = seg[12]                 // 请求range
+	p["sent_http_content_range"] = seg[13]                 // 发送range
 	this.ParseUrl(p)
 	this.ParseBandwidth(p)
 	return &p
@@ -85,29 +85,27 @@ func (this *LogParser) ParseUrl(p P) {
 		}
 	}()
 	p["uri"] = u.Path                //
-	p["vkey"] = m["vkey"][0]         //
-	p["locid"] = m["locid"][0]       //
-	p["size"] = m["size"][0]         //
-	p["userid"] = m["userid"][0]     //
-	p["ocid"] = m["ocid"][0]         //
-	p["userip"] = m["userip"][0]     //
-	p["spid"] = m["spid"][0]         //
-	p["pid"] = m["pid"][0]           //
-	p["portalid"] = m["portalid"][0] //
-	p["spip"] = m["spip"][0]         //
+	p["userip"] = m["userip"][0]         //
+	p["spid"] = m["spid"][0]       //
+	p["pid"] = m["pid"][0]         //
 	p["spport"] = m["spport"][0]     //
-	p["sdtfrom"] = m["sdtfrom"][0]   //
-	p["tradeid"] = m["tradeid"][0]   //
-	p["lsttm"] = m["lsttm"][0]       //
+	p["lsttm"] = m["lsttm"][0]         //
+	p["vkey"] = m["vkey"][0]     //
+	p["userid"] = m["userid"][0]         //
+	p["portalid"] = m["portalid"][0]           //
+	p["spip"] = m["spip"][0] //
+	p["sdtfrom"] = m["sdtfrom"][0]         //
+	p["tradeid"] = m["tradeid"][0]     //
+	p["enkey"] = m["enkey"][0]   //
 	delete(p, "url")
 }
 
 func (this *LogParser) ParseBandwidth(p P) {
 	// todo
-	ct := p["ct"].(time.Time)
-	dur := p["dur"].(float64)
+	ct := p["time_local"].(time.Time)
+	dur := p["request_time"].(float64)
 	st := ct.Add(time.Duration(dur) * time.Second)
 	p["st"] = st
-	bw := ToFloat(p["down"]) * 8 / dur
+	bw := ToFloat(p["bytes_sent"]) * 8 / dur
 	p["bw"] = bw
 }

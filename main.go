@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/signal"
 	"time"
+	"encoding/json"
 )
 
 func main() {
@@ -27,16 +28,16 @@ func main() {
 	LocalDb, _ = scribble.New("log", nil)
 	var err error
 	// todo 配置通过文件读取
-	Stream, err = gorm.Open("postgres", "host=pipeline user=dh dbname=dh sslmode=disable password=")
+	Stream, err = gorm.Open("postgres", "host=pipeline1 user=soooner dbname=dh sslmode=disable password=")
 	defer Stream.Close()
 	if err != nil {
 		panic(err)
 	}
-	Citus, err = gorm.Open("postgres", "host=citus user=postgres dbname=postgres sslmode=disable password=")
-	defer Citus.Close()
-	if err != nil {
-		panic(err)
-	}
+	//Citus, err = gorm.Open("postgres", "host=citus user=postgres dbname=postgres sslmode=disable password=")
+	//defer Citus.Close()
+	//if err != nil {
+	//	panic(err)
+	//}
 	initConsumer()
 	defer func() {
 		if err := KafkaConsumer.Close(); err != nil {
@@ -44,7 +45,7 @@ func main() {
 		}
 	}()
 	go consume("log_topic", ProcLog)
-	go consume("ws_topic", ProcWs)
+	//go consume("ws_topic", ProcWs)
 	beego.Run()
 }
 
@@ -87,7 +88,7 @@ ConsumerLoop:
 
 func initConsumer() {
 	var err error
-	KafkaConsumer, err = NewConsumer([]string{"kafka:9092"}, nil)
+	KafkaConsumer, err = NewConsumer([]string{"kafka1:19092","kafka2:19092","kafka3:19092"}, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -96,7 +97,15 @@ func initConsumer() {
 func ProcLog(msg *ConsumerMessage) {
 	parser := LogParser{}
 	t := string(msg.Value)
-	p := parser.Parse(t)
+	//由于t为json格式，下面处理json转换成map，取出message对应的值，然后进行解析
+	msg1 := []byte(t)
+	dat := make(map[string]interface{})
+	if err := json.Unmarshal(msg1, &dat); err != nil {
+		panic(err)
+	}
+
+	p := parser.Parse(dat["message"].(string))
+
 	//Debug("Consumed ", msg.Offset, string(msg.Value))
 	err := InsertDb(p)
 	if err != nil {
@@ -108,17 +117,20 @@ func ProcLog(msg *ConsumerMessage) {
 
 func InsertDb(p *P) (e error) {
 	v := *p
-	// todo
-	e = Stream.Exec(`insert into s_log (msg) values (?)`,
-		v["msg"]).Error
+
+	 //todo
+	//Debug(v)
+	e = Stream.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,http_range,sent_http_content_range,uri,userip,spid,pid,spport,lsttm,vkey,userid,portalid,spip,sdtfrom,tradeid,enkey,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["http_range"],v["sent_http_content_range"],v["uri"],v["userip"],v["spid"],v["pid"],v["spport"],v["lsttm"],v["vkey"],v["userid"],v["portalid"],v["spip"],v["sdtfrom"],v["tradeid"],v["enkey"],v["st"],v["bw"]).Error
+
 	if e != nil {
 		return
 	}
-	e = Citus.Exec(`insert into t_userlog (msg) values (?)`,
-		v["msg"]).Error
-	if e != nil {
-		return
-	}
+	//e = Citus.Exec(`insert into t_userlog (msg) values (?)`,
+	//	v["msg"]).Error
+	//if e != nil {
+	//	return
+	//}
 	return
 }
 
