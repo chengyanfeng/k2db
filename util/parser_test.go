@@ -1,8 +1,8 @@
 package util
 
 import (
-	"testing"
 	"encoding/json"
+	"testing"
 )
 
 func TestLogParser_Parse(t *testing.T) {
@@ -35,5 +35,18 @@ func BenchmarkLogParser_Parse(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		parser := LogParser{}
 		parser.Parse(msg)
+	}
+}
+
+func BenchmarkLogParser_ParseJson(b *testing.B) {
+	msg := ReadFile("sample1.txt")
+	for i := 0; i < b.N; i++ {
+		parser := LogParser{}
+		msg1 := []byte(msg)
+		dat := make(map[string]interface{})
+		if err := json.Unmarshal(msg1, &dat); err != nil {
+			panic(err)
+		}
+		parser.Parse(dat["message"].(string))
 	}
 }
