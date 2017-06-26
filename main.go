@@ -28,8 +28,13 @@ func main() {
 	LocalDb, _ = scribble.New("log", nil)
 	var err error
 	// todo 配置通过文件读取
-	Stream, err = gorm.Open("postgres", "host=pipeline1 user=soooner dbname=dh sslmode=disable password=")
+	Stream, err = gorm.Open("postgres", "host=pipeline1 user=haproxy dbname=haproxy sslmode=disable password=123456")
 	defer Stream.Close()
+	if err != nil {
+		panic(err)
+	}
+	Stream1, err = gorm.Open("postgres", "host=k2db user=haproxy dbname=haproxy sslmode=disable password=123456")
+	defer Stream1.Close()
 	if err != nil {
 		panic(err)
 	}
@@ -103,11 +108,15 @@ func ProcLog(msg *ConsumerMessage) {
 	if err := json.Unmarshal(msg1, &dat); err != nil {
 		panic(err)
 	}
+	//filebeat产生的信息
+	beat :=dat["beat"].(map[string]interface {})
+	//将日志和filebeat所在机器的主机名拼接
+	msg2 := dat["message"].(string) + " " + beat["hostname"].(string)
 
-	p := parser.Parse(dat["message"].(string))
+	p := parser.Parse(msg2)
 
 	//Debug("Consumed ", msg.Offset, string(msg.Value))
-	err := InsertDb(p)
+	err := InsertDb1(p)
 	if err != nil {
 		Error(err)
 	} else {
@@ -120,12 +129,50 @@ func InsertDb(p *P) (e error) {
 
 	 //todo
 	//Debug(v)
-	e = Stream.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,http_range,sent_http_content_range,uri,userip,spid,pid,spport,lsttm,vkey,userid,portalid,spip,sdtfrom,tradeid,enkey,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["http_range"],v["sent_http_content_range"],v["uri"],v["userip"],v["spid"],v["pid"],v["spport"],v["lsttm"],v["vkey"],v["userid"],v["portalid"],v["spip"],v["sdtfrom"],v["tradeid"],v["enkey"],v["st"],v["bw"]).Error
+	e = Stream.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,http_range,sent_http_content_range,filebeat_hostname,uri,userip,spid,pid,spport,lsttm,vkey,userid,portalid,spip,sdtfrom,tradeid,enkey,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["http_range"],v["sent_http_content_range"],v["filebeat_hostname"],v["uri"],v["userip"],v["spid"],v["pid"],v["spport"],v["lsttm"],v["vkey"],v["userid"],v["portalid"],v["spip"],v["sdtfrom"],v["tradeid"],v["enkey"],v["st"],v["bw"]).Error
 
 	if e != nil {
 		return
 	}
+
+	e = Stream1.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,http_range,sent_http_content_range,filebeat_hostname,uri,userip,spid,pid,spport,lsttm,vkey,userid,portalid,spip,sdtfrom,tradeid,enkey,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["http_range"],v["sent_http_content_range"],v["filebeat_hostname"],v["uri"],v["userip"],v["spid"],v["pid"],v["spport"],v["lsttm"],v["vkey"],v["userid"],v["portalid"],v["spip"],v["sdtfrom"],v["tradeid"],v["enkey"],v["st"],v["bw"]).Error
+	if e != nil{
+		return
+	}
+	//e = Citus.Exec(`insert into t_userlog (msg) values (?)`,
+	//	v["msg"]).Error
+	//if e != nil {
+	//	return
+	//}
+	return
+}
+
+func InsertDb1(p *P) (e error) {
+	v := *p
+
+	//todo
+	//Debug(v)
+	defer func() {
+		if r := recover(); r != nil {
+			//log.Println("pipelinedb1", r)
+			return
+		}
+	}()
+	Stream.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,http_range,sent_http_content_range,filebeat_hostname,uri,userip,spid,pid,spport,lsttm,vkey,userid,portalid,spip,sdtfrom,tradeid,enkey,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["http_range"],v["sent_http_content_range"],v["filebeat_hostname"],v["uri"],v["userip"],v["spid"],v["pid"],v["spport"],v["lsttm"],v["vkey"],v["userid"],v["portalid"],v["spip"],v["sdtfrom"],v["tradeid"],v["enkey"],v["st"],v["bw"])
+
+	defer func() {
+		if r := recover(); r != nil {
+			//log.Println("pipelinedb2", r)
+			return
+		}
+	}()
+
+	Stream1.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,http_range,sent_http_content_range,filebeat_hostname,uri,userip,spid,pid,spport,lsttm,vkey,userid,portalid,spip,sdtfrom,tradeid,enkey,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["http_range"],v["sent_http_content_range"],v["filebeat_hostname"],v["uri"],v["userip"],v["spid"],v["pid"],v["spport"],v["lsttm"],v["vkey"],v["userid"],v["portalid"],v["spip"],v["sdtfrom"],v["tradeid"],v["enkey"],v["st"],v["bw"])
+
 	//e = Citus.Exec(`insert into t_userlog (msg) values (?)`,
 	//	v["msg"]).Error
 	//if e != nil {

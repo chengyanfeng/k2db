@@ -11,6 +11,7 @@ type LogParser struct {
 
 func (this *LogParser) Parse(msg string) *P {
 	// todo: 解析msg并入库，需要考虑数据计算，如带宽、开始时间，需要考虑多值返回，用于多stream入库
+
 	tmp := strings.Split(msg, " ")
 	seg := []interface{}{}
 	token := ""
@@ -44,7 +45,7 @@ func (this *LogParser) Parse(msg string) *P {
 	}
 	//Debug(len(seg), JsonEncode(seg))
 	p := P{}
-	if len(seg) != 14 {
+	if len(seg) != 15 {
 		Error("Invalid msg", msg)
 		return &p
 	}
@@ -62,6 +63,7 @@ func (this *LogParser) Parse(msg string) *P {
 	p["cache_status"] = seg[11]                    // 缓存状态（MISS HIT IOTHROUGH）
 	p["http_range"] = seg[12]                 // 请求range
 	p["sent_http_content_range"] = seg[13]                 // 发送range
+	p["filebeat_hostname"] = seg[14]
 	this.ParseUrl(p)
 	this.ParseBandwidth(p)
 	return &p

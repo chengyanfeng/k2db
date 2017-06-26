@@ -25,8 +25,13 @@ func TestLogParser_Json(t *testing.T) {
 	if err := json.Unmarshal(msg1, &dat); err != nil {
 		panic(err)
 	}
-	p := parser.Parse(dat["message"].(string))
+	//filebeat产生的信息
+	beat :=dat["beat"].(map[string]interface {})
+	//将日志和filebeat所在机器的主机名拼接
+	msg2 := dat["message"].(string) + " " + beat["hostname"].(string)
+	p := parser.Parse(msg2)
 
+	Debug(msg2)
 	Debug(JsonEncode(p))
 }
 
