@@ -49,7 +49,11 @@ func (this *LogParser) Parse(msg string) *P {
 		Error("Invalid msg", msg)
 		return &p
 	}
-	p["time_local"], _ = ToTime(ToString(seg[0])) // 本地时间
+	p["time_local_origin"], _ = ToTime(ToString(seg[0])) // 本地时间
+	//s, _ := ToTime(ToString(seg[0]))
+	p["time_local"] = p["time_local_origin"].(time.Time).Format("2006-01-02") //只要年月日
+	//fmt.Println(strings.Split(s.Format("2006-01-02"),"-")[0])
+
 	p["request_time"] = ToFloat(seg[1])            // 服务时间
 	p["remote_addr"] = seg[2]                  // 远端地址（客户端地址）
 	p["status"] = seg[3]                    // HTTP回复状态码
@@ -71,6 +75,7 @@ func (this *LogParser) Parse(msg string) *P {
 
 // 解析url
 func (this *LogParser) ParseUrl(p P) {
+	aes :=Aes{}
 	u, err := url.Parse(ToString(p["url"]))
 	if err != nil {
 		Error(err)
@@ -93,7 +98,9 @@ func (this *LogParser) ParseUrl(p P) {
 	p["spport"] = m["spport"][0]     //
 	p["lsttm"] = m["lsttm"][0]         //
 	p["vkey"] = m["vkey"][0]     //
-	p["userid"] = m["userid"][0]         //
+	key :=[]byte("ac22273abb2f4960")
+	userid,_ :=aes.CBCDecrypter(key, m["userid"][0])
+	p["userid"] = strings.Split(userid, "\u0005")[0]       //
 	p["portalid"] = m["portalid"][0]           //
 	p["spip"] = m["spip"][0] //
 	p["sdtfrom"] = m["sdtfrom"][0]         //
@@ -104,10 +111,11 @@ func (this *LogParser) ParseUrl(p P) {
 
 func (this *LogParser) ParseBandwidth(p P) {
 	// todo
-	ct := p["time_local"].(time.Time)
+	ct := p["time_local_origin"].(time.Time)
 	dur := p["request_time"].(float64)
 	st := ct.Add(time.Duration(dur) * time.Second)
 	p["st"] = st
 	bw := ToFloat(p["bytes_sent"]) * 8 / dur
 	p["bw"] = bw
+	delete(p, "time_local_origin")
 }

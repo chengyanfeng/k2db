@@ -55,3 +55,10 @@ func BenchmarkLogParser_ParseJson(b *testing.B) {
 		parser.Parse(dat["message"].(string))
 	}
 }
+
+func TestAesDecrypt(t *testing.T) {
+	aes :=Aes{}
+	key :=[]byte("ac22273abb2f4960")
+	userids_str :="547409b7086f8be77774f3db148d0451"
+	aes.CBCDecrypter(key, userids_str)
+}

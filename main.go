@@ -38,11 +38,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	//Citus, err = gorm.Open("postgres", "host=citus user=postgres dbname=postgres sslmode=disable password=")
-	//defer Citus.Close()
-	//if err != nil {
-	//	panic(err)
-	//}
+	Citus, err = gorm.Open("postgres", "host=citus1 user=postgres dbname=postgres sslmode=disable password=")
+	defer Citus.Close()
+	if err != nil {
+		panic(err)
+	}
 	initConsumer()
 	defer func() {
 		if err := KafkaConsumer.Close(); err != nil {
@@ -173,11 +173,15 @@ func InsertDb1(p *P) (e error) {
 	Stream1.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,http_range,sent_http_content_range,filebeat_hostname,uri,userip,spid,pid,spport,lsttm,vkey,userid,portalid,spip,sdtfrom,tradeid,enkey,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["http_range"],v["sent_http_content_range"],v["filebeat_hostname"],v["uri"],v["userip"],v["spid"],v["pid"],v["spport"],v["lsttm"],v["vkey"],v["userid"],v["portalid"],v["spip"],v["sdtfrom"],v["tradeid"],v["enkey"],v["st"],v["bw"])
 
-	//e = Citus.Exec(`insert into t_userlog (msg) values (?)`,
-	//	v["msg"]).Error
-	//if e != nil {
-	//	return
-	//}
+	defer func() {
+		if r := recover(); r != nil {
+			//log.Println("citus", r)
+			return
+		}
+	}()
+	e = Citus.Exec(`insert into u_log (time_local,remote_addr,http_user_agent,cache_status,filebeat_hostname,userip,spid,pid,userid,spip,bytes_sent) values (?,?,?,?,?,?,?,?,?,?,?) on conflict(time_local,remote_addr,http_user_agent,cache_status,filebeat_hostname,userip,spid,pid,userid,spip) do update set bytes_sent = u_log.bytes_sent + EXCLUDED.bytes_sent`,
+		v["time_local"], v["remote_addr"], v["http_user_agent"], v["cache_status"], v["filebeat_hostname"], v["userip"], v["spid"], v["pid"], v["userid"], v["spip"], v["bytes_sent"]).Error
+
 	return
 }
 
