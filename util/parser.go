@@ -41,7 +41,6 @@ func (this *LogParser) Parse(msg string) *P {
 				seg = append(seg, v)
 			}
 		}
-
 	}
 	//Debug(len(seg), JsonEncode(seg))
 	p := P{}
@@ -53,7 +52,6 @@ func (this *LogParser) Parse(msg string) *P {
 	//s, _ := ToTime(ToString(seg[0]))
 	p["time_local"] = p["time_local_origin"].(time.Time).Format("2006-01-02") //只要年月日
 	//fmt.Println(strings.Split(s.Format("2006-01-02"),"-")[0])
-
 	p["request_time"] = ToFloat(seg[1])            // 服务时间
 	p["remote_addr"] = seg[2]                  // 远端地址（客户端地址）
 	p["status"] = seg[3]                    // HTTP回复状态码
@@ -65,8 +63,6 @@ func (this *LogParser) Parse(msg string) *P {
 	p["http_referer"] = seg[9]                   // HTTP_REFERER
 	p["http_user_agent"] = seg[10]                     // USERAGENT
 	p["cache_status"] = seg[11]                    // 缓存状态（MISS HIT IOTHROUGH）
-	p["http_range"] = seg[12]                 // 请求range
-	p["sent_http_content_range"] = seg[13]                 // 发送range
 	p["filebeat_hostname"] = seg[14]
 	this.ParseUrl(p)
 	this.ParseBandwidth(p)
@@ -91,21 +87,20 @@ func (this *LogParser) ParseUrl(p P) {
 			Error("ParseUrl", err, m)
 		}
 	}()
-	p["uri"] = u.Path                //
-	p["userip"] = m["userip"][0]         //
-	p["spid"] = m["spid"][0]       //
-	p["pid"] = m["pid"][0]         //
-	p["spport"] = m["spport"][0]     //
-	p["lsttm"] = m["lsttm"][0]         //
-	p["vkey"] = m["vkey"][0]     //
-	key :=[]byte("ac22273abb2f4960")
-	userid,_ :=aes.CBCDecrypter(key, m["userid"][0])
-	p["userid"] = strings.Split(userid, "\u0005")[0]       //
-	p["portalid"] = m["portalid"][0]           //
-	p["spip"] = m["spip"][0] //
-	p["sdtfrom"] = m["sdtfrom"][0]         //
-	p["tradeid"] = m["tradeid"][0]     //
-	p["enkey"] = m["enkey"][0]   //
+	p["uri"] = u.Path                //文件地址
+	p["userip"] = m["userip"][0]         //客户ip
+	p["spid"] = m["spid"][0]       //客户标识（产品）可暂时作为产品id
+	p["pid"] = m["pid"][0]         //产品id
+	p["spport"] = m["spport"][0]     //sp端口
+	if strings.Count(string(m["userid"][0]),"")-1==32 {
+		key :=[]byte("ac22273abb2f4960")
+		userid,_ :=aes.CBCDecrypter(key, m["userid"][0])	//解密userid
+		p["userid"] = strings.Split(userid, "\u0005")[0]       //用户id
+	}else {
+		p["userid"] = m["userid"][0]			//用户id
+	}
+	p["portalid"] = m["portalid"][0]           //门户id，用以归类客户
+	p["spip"] = m["spip"][0] //服务商ip
 	delete(p, "url")
 }
 
@@ -113,7 +108,7 @@ func (this *LogParser) ParseBandwidth(p P) {
 	// todo
 	ct := p["time_local_origin"].(time.Time)
 	dur := p["request_time"].(float64)
-	st := ct.Add(time.Duration(dur) * time.Second)
+	st := ct.Add(-time.Duration(dur) * time.Second)
 	p["st"] = st
 	bw := ToFloat(p["bytes_sent"]) * 8 / dur
 	p["bw"] = bw

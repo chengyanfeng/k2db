@@ -23,7 +23,6 @@ func (this *Aes) CBCDecrypter(key []byte, userid_str string) (strDesc string, er
 	}
 	//初始化向量
 	iv := []byte{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}
-
 	// CBC mode always works in whole blocks.
 	if len(userid)%aes.BlockSize != 0 {
 		panic("userid is not a multiple of the block size")
