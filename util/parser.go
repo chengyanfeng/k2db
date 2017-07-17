@@ -44,28 +44,30 @@ func (this *LogParser) Parse(msg string) *P {
 	}
 	//Debug(len(seg), JsonEncode(seg))
 	p := P{}
-	if len(seg) != 15 {
-		Error("Invalid msg", msg)
-		return &p
+	//if len(seg) != 15 {
+	//	Error("Invalid msg", msg)
+	//	return &p
+	//}
+	if len(seg) == 16 && seg[15]=="/dev/shm/logs/soooner_cache.log" {
+		p["time_local_origin"], _ = ToTime(ToString(seg[0])) // 本地时间
+		//s, _ := ToTime(ToString(seg[0]))
+		p["time_local"] = p["time_local_origin"].(time.Time).Format("2006-01-02") //只要年月日
+		//fmt.Println(strings.Split(s.Format("2006-01-02"),"-")[0])
+		p["request_time"] = ToFloat(seg[1])            // 服务时间
+		p["remote_addr"] = seg[2]                  // 远端地址（客户端地址）
+		p["status"] = seg[3]                    // HTTP回复状态码
+		p["err_code"] = seg[4]                    // 错误码
+		p["request_length"] = seg[5]                      // 请求长度
+		p["bytes_sent"] = seg[6]                    // 发送长度
+		p["request_method"] = seg[7]                  // 请求方式
+		p["url"] = seg[8]                     // 完整请求链接
+		p["http_referer"] = seg[9]                   // HTTP_REFERER
+		p["http_user_agent"] = seg[10]                     // USERAGENT
+		p["cache_status"] = seg[11]                    // 缓存状态（MISS HIT IOTHROUGH）
+		p["dhbeat_hostname"] = seg[14]
+		this.ParseUrl(p)
+		this.ParseBandwidth(p)
 	}
-	p["time_local_origin"], _ = ToTime(ToString(seg[0])) // 本地时间
-	//s, _ := ToTime(ToString(seg[0]))
-	p["time_local"] = p["time_local_origin"].(time.Time).Format("2006-01-02") //只要年月日
-	//fmt.Println(strings.Split(s.Format("2006-01-02"),"-")[0])
-	p["request_time"] = ToFloat(seg[1])            // 服务时间
-	p["remote_addr"] = seg[2]                  // 远端地址（客户端地址）
-	p["status"] = seg[3]                    // HTTP回复状态码
-	p["err_code"] = seg[4]                    // 错误码
-	p["request_length"] = seg[5]                      // 请求长度
-	p["bytes_sent"] = seg[6]                    // 发送长度
-	p["request_method"] = seg[7]                  // 请求方式
-	p["url"] = seg[8]                     // 完整请求链接
-	p["http_referer"] = seg[9]                   // HTTP_REFERER
-	p["http_user_agent"] = seg[10]                     // USERAGENT
-	p["cache_status"] = seg[11]                    // 缓存状态（MISS HIT IOTHROUGH）
-	p["filebeat_hostname"] = seg[14]
-	this.ParseUrl(p)
-	this.ParseBandwidth(p)
 	return &p
 }
 
@@ -87,8 +89,13 @@ func (this *LogParser) ParseUrl(p P) {
 			Error("ParseUrl", err, m)
 		}
 	}()
-	p["uri"] = u.Path                //文件地址
-	p["userip"] = m["userip"][0]         //客户ip
+	//p["uri"] = u.Path                //文件地址
+	if m["userip"] != nil{
+		p["userip"] = m["userip"][0]         //客户ip
+	}else {
+		p["userip"] = nil
+	}
+
 	p["spid"] = m["spid"][0]       //客户标识（产品）可暂时作为产品id
 	p["pid"] = m["pid"][0]         //产品id
 	p["spport"] = m["spport"][0]     //sp端口

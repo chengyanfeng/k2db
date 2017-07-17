@@ -7,7 +7,7 @@ import (
 
 func TestLogParser_Parse(t *testing.T) {
 	parser := LogParser{}
-	msg := ReadFile("sample.txt")
+	msg := ReadFile("sample3.txt")
 
 	//msg := ""
 	p := parser.Parse(msg)

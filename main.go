@@ -3,7 +3,6 @@ package main
 import (
 	. "github.com/Shopify/sarama"
 	"github.com/astaxie/beego"
-	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/nanobox-io/golang-scribble"
 	. "k2db/controller"
@@ -15,6 +14,11 @@ import (
 	"os/signal"
 	"time"
 	"encoding/json"
+	"flag"
+	"github.com/nats-io/go-nats"
+	"runtime"
+	"fmt"
+	"github.com/jinzhu/gorm"
 )
 
 func main() {
@@ -27,31 +31,85 @@ func main() {
 	//beego.BeeLogger.SetLogFuncCallDepth(4)
 	LocalDb, _ = scribble.New("log", nil)
 	var err error
-	// todo 配置通过文件读取
+	//// todo 配置通过文件读取
 	Stream, err = gorm.Open("postgres", "host=pipeline1 user=haproxy dbname=haproxy sslmode=disable password=haproxy123456")
 	defer Stream.Close()
 	if err != nil {
 		panic(err)
 	}
-	Stream1, err = gorm.Open("postgres", "host=pipeline2 user=haproxy dbname=haproxy sslmode=disable password=haproxy123456")
-	defer Stream1.Close()
-	if err != nil {
-		panic(err)
-	}
-	Citus, err = gorm.Open("postgres", "host=citus1 user=postgres dbname=postgres sslmode=disable password=")
-	defer Citus.Close()
-	if err != nil {
-		panic(err)
-	}
-	initConsumer()
-	defer func() {
-		if err := KafkaConsumer.Close(); err != nil {
-			log.Fatalln(err)
-		}
-	}()
-	go consume("log_topic", ProcLog)
+	//Stream1, err = gorm.Open("postgres", "host=pipeline2 user=haproxy dbname=haproxy sslmode=disable password=haproxy123456")
+	//defer Stream1.Close()
+	//if err != nil {
+	//	panic(err)
+	//}
+	//Citus, err = gorm.Open("postgres", "host=citus1 user=postgres dbname=postgres sslmode=disable password=")
+	//defer Citus.Close()
+	//if err != nil {
+	//	panic(err)
+	//}
+	//initConsumer()
+	//defer func() {
+	//	if err := KafkaConsumer.Close(); err != nil {
+	//		log.Fatalln(err)
+	//	}
+	//}()
+	//go consume("log_topic", ProcLog)
+	go Natscn()
 	//go consume("ws_topic", ProcWs)
 	beego.Run()
+}
+
+func Natscn(){
+	//server的地址
+	var urls = flag.String("s", "nats://111.206.135.105:9092,nats://111.206.135.106:9092,nats://111.206.135.107:9092", "The nats server URLs (separated by comma)")
+
+	//是否使用安全连接
+	var showTime = flag.Bool("t", false, "Display timestamps")
+
+	//args := flag.Args()
+	//if len(args) < 1 {
+	//	usage()
+	//}
+	nc, err := nats.Connect(*urls)
+	//nc, err := nats.Connect("nats://172.16.102.133:9092,nats://172.16.102.134:9092,nats://172.16.102.135:9092")
+	if err != nil {
+		log.Fatalf("Can't connect: %v\n", err)
+	}
+	// 订阅的subject
+	subj := "log"
+
+	//go AutoSaveOffset(subj)
+	//offset := LoadOffset(subj) + 1
+	//if offset < 2 {
+	//	offset = -1
+	//}
+
+	// 订阅主题, 当收到subject时候执行后面的func函数
+	// 返回值sub是subscription的实例
+	//
+	nc.Subscribe(subj, func(msg *nats.Msg){
+			//log.Printf("[#%d] Received on [%s]: '%s'\n", i, msg.Subject, string(msg.Data))
+		parser := LogParser{}
+		fmt.Println(string(msg.Data))
+		p := parser.Parse(string(msg.Data))
+		fmt.Println(p)
+		err1 := InsertDb1(p)
+		if err1 != nil {
+			Error(err1)
+		}
+	})
+
+	nc.Flush()
+
+	if err := nc.LastError(); err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("Listening on [%s]\n", subj)
+	if *showTime {
+		log.SetFlags(log.LstdFlags)
+	}
+	runtime.Goexit()
 }
 
 func consume(topic string, f func(msg *ConsumerMessage)) {
@@ -129,15 +187,16 @@ func InsertDb(p *P) (e error) {
 
 	 //todo
 	//Debug(v)
-	e = Stream.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,filebeat_hostname,uri,userip,spid,pid,spport,userid,portalid,spip,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["filebeat_hostname"],v["uri"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"]).Error
+	e = Stream.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"]).Error
 
 	if e != nil {
 		return
 	}
 
-	e = Stream1.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,filebeat_hostname,uri,userip,spid,pid,spport,userid,portalid,spip,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["filebeat_hostname"],v["uri"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"]).Error
+	e = Stream1.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"]).Error
+
 	if e != nil{
 		return
 	}
@@ -161,28 +220,27 @@ func InsertDb1(p *P) (e error) {
 		}
 	}()
 	//往pipeline1中插数据
-	Stream.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,filebeat_hostname,uri,userip,spid,pid,spport,userid,portalid,spip,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["filebeat_hostname"],v["uri"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"])
+	Stream.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"])
 
-	defer func() {
-		if r := recover(); r != nil {
-			//log.Println("pipelinedb2", r)
-			return
-		}
-	}()
+	//defer func() {
+	//	if r := recover(); r != nil {
+	//		//log.Println("pipelinedb2", r)
+	//		return
+	//	}
+	//}()
 	//往pipeline2中插数据
-	Stream1.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,filebeat_hostname,uri,userip,spid,pid,spport,userid,portalid,spip,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["filebeat_hostname"],v["uri"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"])
-
-	defer func() {
-		if r := recover(); r != nil {
-			//log.Println("citus", r)
-			return
-		}
-	}()
-	e = Citus.Exec(`insert into u_log (time_local,remote_addr,http_user_agent,cache_status,filebeat_hostname,userip,spid,pid,userid,spip,bytes_sent) values (?,?,?,?,?,?,?,?,?,?,?) on conflict(time_local,remote_addr,http_user_agent,cache_status,filebeat_hostname,userip,spid,pid,userid,spip) do update set bytes_sent = u_log.bytes_sent + EXCLUDED.bytes_sent`,
-		v["time_local"], v["remote_addr"], v["http_user_agent"], v["cache_status"], v["filebeat_hostname"], v["userip"], v["spid"], v["pid"], v["userid"], v["spip"], v["bytes_sent"]).Error
-
+	//Stream1.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+	//	v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"])
+	//
+	//defer func() {
+	//	if r := recover(); r != nil {
+	//		//log.Println("citus", r)
+	//		return
+	//	}
+	//}()
+	//e = Citus.Exec(`insert into u_log (time_local,remote_addr,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,userid,spip,bytes_sent) values (?,?,?,?,?,?,?,?,?,?,?) on conflict(time_local,remote_addr,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,userid,spip) do update set bytes_sent = u_log.bytes_sent + EXCLUDED.bytes_sent`,
+	//	v["time_local"], v["remote_addr"], v["http_user_agent"], v["cache_status"], v["dhbeat_hostname"], v["userip"], v["spid"], v["pid"], v["userid"], v["spip"], v["bytes_sent"]).Error
 	return
 }
 
