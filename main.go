@@ -87,7 +87,7 @@ func Natscn(){
 			Error(err1)
 		}
 	})
-
+	nc.Flush()
 	log.Printf("Listening on [%s]\n", subj)
 	//保持连接
 	runtime.Goexit()
