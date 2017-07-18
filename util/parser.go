@@ -48,7 +48,7 @@ func (this *LogParser) Parse(msg string) *P {
 	//	Error("Invalid msg", msg)
 	//	return &p
 	//}
-	if len(seg) == 16 && seg[15]=="/dev/shm/logs/soooner_cache.log" {
+	if len(seg) == 16 && strings.Contains(seg[15].(string),"soooner_cache.log") {
 		p["time_local_origin"], _ = ToTime(ToString(seg[0])) // 本地时间
 		//s, _ := ToTime(ToString(seg[0]))
 		p["time_local"] = p["time_local_origin"].(time.Time).Format("2006-01-02") //只要年月日

@@ -15,8 +15,8 @@ import (
 	"time"
 	"encoding/json"
 	"runtime"
+	"github.com/nats-io/go-nats-streaming"
 	"fmt"
-	"github.com/nats-io/go-nats"
 	"github.com/jinzhu/gorm"
 )
 
@@ -59,35 +59,38 @@ func main() {
 }
 
 func Natscn(){
-	//server的地址
-	//var urls = flag.String("s", "nats://111.206.135.105:9092,nats://111.206.135.106:9092,nats://111.206.135.107:9092", "The nats server URLs (separated by comma)")
-	//nc, err := nats.Connect(*urls)
+	//server的连接
+	//nc, err := nats.Connect("nats://111.206.135.105:9092")
 
 	//stan.Connect(clusterID, clientID, ops ...Option)
-	//ns, _ := stan.Connect("my_cluster", "stan1", stan.NatsURL("nats://111.206.135.107:9092"))
+	ns, _ := stan.Connect("my_cluster", "myid", stan.NatsURL("nats://172.16.102.133:9092,nats://172.16.102.134:9092,nats://172.16.102.135:9092"))
 
-	nc, err := nats.Connect("nats://172.16.102.133:9092,nats://172.16.102.134:9092,nats://172.16.102.135:9092")
-	if err != nil {
-		log.Fatalf("Can't connect: %v\n", err)
-	}
+	//ns.Publish("log", []byte("Hello World!1"))
+	//nc, err := nats.Connect("nats://172.16.102.133:9092,nats://172.16.102.134:9092,nats://172.16.102.135:9092")
+	//if err != nil {
+	//	log.Fatalf("Can't connect: %v\n", err)
+	//}
 	// 订阅的subject
 	subj := "log"
 
 	// 订阅主题, 当收到subject时候执行后面的func函数
 	// 返回值sub是subscription的实例
-	// Simple Async Subscriber
-	nc.Subscribe(subj, func(msg *nats.Msg){
+	// Async Subscriber
+	_, err := ns.Subscribe(subj, func(msg *stan.Msg){
 		fmt.Printf("Received a message: %s\n", string(msg.Data))
 		parser := LogParser{}
-		fmt.Println(string(msg.Data))
 		p := parser.Parse(string(msg.Data))
-		fmt.Println(p)
+		Debug(p)
 		err1 := InsertDb(p)
 		if err1 != nil {
 			Error(err1)
 		}
-	})
-	nc.Flush()
+	}, stan.DurableName("cdn"))
+	if err != nil {
+		ns.Close()
+		log.Fatal(err)
+	}
+	//nc.Flush()
 	log.Printf("Listening on [%s]\n", subj)
 	//保持连接
 	runtime.Goexit()
@@ -194,8 +197,8 @@ func InsertDb(p *P) (e error) {
 			return
 		}
 	}()
-	e = Citus.Exec(`insert into u_log (time_local,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,userid,spip,bytes_sent) values (?,?,?,?,?,?,?,?,?,?) on conflict(time_local,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,userid,spip) do update set bytes_sent = u_log.bytes_sent + EXCLUDED.bytes_sent`,
-		v["time_local"], v["http_user_agent"], v["cache_status"], v["dhbeat_hostname"], v["userip"], v["spid"], v["pid"], v["userid"], v["spip"], v["bytes_sent"]).Error
+	e = Citus.Exec(`insert into u_log (time_local,spid,pid,userid,bytes_sent) values (?,?,?,?,?) on conflict(time_local,spid,pid,userid) do update set bytes_sent = u_log.bytes_sent + EXCLUDED.bytes_sent`,
+		v["time_local"], v["spid"], v["pid"], v["userid"], v["bytes_sent"]).Error
 	return
 }
 

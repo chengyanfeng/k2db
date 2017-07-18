@@ -6,9 +6,9 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	. "k2db/def"
-	"pc.cn/task"
 	"testing"
 	"time"
+	"k2db/task"
 )
 
 type User struct {
