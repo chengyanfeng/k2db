@@ -30,7 +30,7 @@ func main() {
 	//beego.BeeLogger.SetLogFuncCallDepth(4)
 	LocalDb, _ = scribble.New("log", nil)
 	var err error
-	//// todo 配置通过文件读取
+	// todo 配置通过文件读取
 	Stream, err = gorm.Open("postgres", "host=pipeline1 user=haproxy dbname=haproxy sslmode=disable password=haproxy123456")
 	defer Stream.Close()
 	if err != nil {
@@ -53,7 +53,11 @@ func main() {
 	//	}
 	//}()
 	//go consume("log_topic", ProcLog)
-	go Natscn()
+	var MULTICORE int = runtime.NumCPU()
+	runtime.GOMAXPROCS(MULTICORE)
+	for i := 0; i < MULTICORE; i++ { //开cpu核数个goroutine
+		go Natscn()
+	}
 	//go consume("ws_topic", ProcWs)
 	beego.Run()
 }
@@ -64,7 +68,7 @@ func Natscn(){
 
 	//stan.Connect(clusterID, clientID, ops ...Option)
 	ns, _ := stan.Connect("my_cluster", "myid", stan.NatsURL("nats://172.16.102.133:9092,nats://172.16.102.134:9092,nats://172.16.102.135:9092"))
-
+	//ns, _ := stan.Connect("my_cluster", "myid", stan.NatsURL("nats://111.206.135.105:9092"))
 	//ns.Publish("log", []byte("Hello World!1"))
 	//nc, err := nats.Connect("nats://172.16.102.133:9092,nats://172.16.102.134:9092,nats://172.16.102.135:9092")
 	//if err != nil {
