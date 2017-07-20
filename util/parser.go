@@ -44,10 +44,10 @@ func (this *LogParser) Parse(msg string) *P {
 	}
 	//Debug(len(seg), JsonEncode(seg))
 	p := P{}
-	//if len(seg) != 15 {
-	//	Error("Invalid msg", msg)
-	//	return &p
-	//}
+	if len(seg) != 16 {
+		Error("Invalid msg", msg)
+		return &p
+	}
 	if len(seg) == 16 && strings.Contains(seg[15].(string),"soooner_cache.log") {
 		p["time_local_origin"], _ = ToTime(ToString(seg[0])) // 本地时间
 		//s, _ := ToTime(ToString(seg[0]))

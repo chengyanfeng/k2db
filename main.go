@@ -16,7 +16,6 @@ import (
 	"encoding/json"
 	"runtime"
 	"github.com/nats-io/go-nats-streaming"
-	"fmt"
 	"github.com/jinzhu/gorm"
 )
 
@@ -53,43 +52,60 @@ func main() {
 	//	}
 	//}()
 	//go consume("log_topic", ProcLog)
-	var MULTICORE int = runtime.NumCPU()
-	runtime.GOMAXPROCS(MULTICORE)
-	for i := 0; i < MULTICORE; i++ { //开cpu核数个goroutine
-		go Natscn()
-	}
+	//var MULTICORE int = runtime.NumCPU()
+	//runtime.GOMAXPROCS(MULTICORE)
+	go Natscn()
 	//go consume("ws_topic", ProcWs)
 	beego.Run()
 }
 
 func Natscn(){
 	//server的连接
-	//nc, err := nats.Connect("nats://111.206.135.105:9092")
+	//nc, err1 := nats.Connect("nats://111.206.135.105:9092")
 
 	//stan.Connect(clusterID, clientID, ops ...Option)
-	ns, _ := stan.Connect("my_cluster", "myid", stan.NatsURL("nats://172.16.102.133:9092,nats://172.16.102.134:9092,nats://172.16.102.135:9092"))
-	//ns, _ := stan.Connect("my_cluster", "myid", stan.NatsURL("nats://111.206.135.105:9092"))
+	ns, err1 := stan.Connect("my_cluster", "myid", stan.NatsURL("nats://172.16.102.133:9092,nats://172.16.102.134:9092,nats://172.16.102.135:9092"))
+	//ns, err1 := stan.Connect("my_cluster", "myiddd"+"-"+strconv.Itoa(i), stan.NatsURL("nats://111.206.135.107:9092"))
+
 	//ns.Publish("log", []byte("Hello World!1"))
-	//nc, err := nats.Connect("nats://172.16.102.133:9092,nats://172.16.102.134:9092,nats://172.16.102.135:9092")
-	//if err != nil {
-	//	log.Fatalf("Can't connect: %v\n", err)
-	//}
+	//nc, err1 := nats.Connect("nats://172.16.102.133:9092,nats://172.16.102.134:9092,nats://172.16.102.135:9092")
+	if err1 != nil {
+		log.Fatalf("Can't connect: %v\n", err1)
+	}
 	// 订阅的subject
-	subj := "log"
+	subj := "logp"
 
 	// 订阅主题, 当收到subject时候执行后面的func函数
 	// 返回值sub是subscription的实例
 	// Async Subscriber
+	//qsub1, err := ns.QueueSubscribe(subj, "bar",func(msg *stan.Msg){
+	//	fmt.Printf("Received a message: %s\n", string(msg.Data))
+	//	parser := LogParser{}
+	//	p := parser.Parse(string(msg.Data))
+	//	Debug(p)
+	//	Stream.Exec(`insert into s_log1 (msg) values (?)`,
+	//		msg.Data)
+	//
+	//	//err1 := InsertDb(p)
+	//	//if err1 != nil {
+	//	//	Error(err1)
+	//	//}
+	//}, stan.DurableName("cdn"))
+
 	_, err := ns.Subscribe(subj, func(msg *stan.Msg){
-		fmt.Printf("Received a message: %s\n", string(msg.Data))
+		//fmt.Printf("Received a message: %s\n", string(msg.Data))
 		parser := LogParser{}
 		p := parser.Parse(string(msg.Data))
 		Debug(p)
-		err1 := InsertDb(p)
-		if err1 != nil {
-			Error(err1)
+		//Stream.Exec(`insert into s_log1 (msg) values (?)`,
+		//	msg.Data)
+		//go InsertDb(p)
+		Dhq <- func() {
+			 InsertDb(p)
 		}
 	}, stan.DurableName("cdn"))
+	//qsub1.Unsubscribe()
+
 	if err != nil {
 		ns.Close()
 		log.Fatal(err)
@@ -160,25 +176,24 @@ func ProcLog(msg *ConsumerMessage) {
 	msg2 := dat["message"].(string) + " " + beat["hostname"].(string)
 
 	p := parser.Parse(msg2)
-
+	Debug(p)
 	//Debug("Consumed ", msg.Offset, string(msg.Value))
-	err := InsertDb(p)
-	if err != nil {
-		Error(err)
-	} else {
-		Cmap.Set(msg.Topic, msg.Offset)
-	}
+	//err := InsertDb(p)
+	//if err != nil {
+	//	Error(err)
+	//} else {
+	//	Cmap.Set(msg.Topic, msg.Offset)
+	//}
 }
 
-func InsertDb(p *P) (e error) {
+func InsertDb(p *P)  {
 	v := *p
 
 	//todo
 	//Debug(v)
 	defer func() {
 		if r := recover(); r != nil {
-			//log.Println("pipelinedb1", r)
-			return
+			log.Println("pipelinedb1", r)
 		}
 	}()
 	//往pipeline1中插数据
@@ -187,8 +202,7 @@ func InsertDb(p *P) (e error) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			//log.Println("pipelinedb2", r)
-			return
+			log.Println("pipelinedb2", r)
 		}
 	}()
 	//往pipeline2中插数据
@@ -197,13 +211,11 @@ func InsertDb(p *P) (e error) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			//log.Println("citus", r)
-			return
+			log.Println("citus", r)
 		}
 	}()
-	e = Citus.Exec(`insert into u_log (time_local,spid,pid,userid,bytes_sent) values (?,?,?,?,?) on conflict(time_local,spid,pid,userid) do update set bytes_sent = u_log.bytes_sent + EXCLUDED.bytes_sent`,
-		v["time_local"], v["spid"], v["pid"], v["userid"], v["bytes_sent"]).Error
-	return
+	Citus.Exec(`insert into u_log (time_local,spid,pid,userid,bytes_sent) values (?,?,?,?,?) on conflict(time_local,spid,pid,userid) do update set bytes_sent = u_log.bytes_sent + EXCLUDED.bytes_sent`,
+		v["time_local"], v["spid"], v["pid"], v["userid"], v["bytes_sent"])
 }
 
 func LoadOffset(topic string) int64 {

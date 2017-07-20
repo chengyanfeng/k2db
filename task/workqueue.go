@@ -2,7 +2,7 @@ package task
 
 import "runtime"
 
-var Dhq WorkQueue = NewWorkQueue(runtime.NumCPU() + 1)
+var Dhq WorkQueue = NewWorkQueue(runtime.NumCPU() + 90)
 
 // WorkQueue is a channel type that you can send Work on.
 type WorkQueue chan Work
