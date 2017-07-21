@@ -17,6 +17,7 @@ import (
 	"runtime"
 	"github.com/nats-io/go-nats-streaming"
 	"github.com/jinzhu/gorm"
+	"fmt"
 )
 
 func main() {
@@ -91,14 +92,16 @@ func Natscn(){
 	//	//	Error(err1)
 	//	//}
 	//}, stan.DurableName("cdn"))
-
+	var i int = 0
 	_, err := ns.Subscribe(subj, func(msg *stan.Msg){
 		//fmt.Printf("Received a message: %s\n", string(msg.Data))
 		parser := LogParser{}
 		p := parser.Parse(string(msg.Data))
 		Debug(p)
-		//Stream.Exec(`insert into s_log1 (msg) values (?)`,
-		//	msg.Data)
+		i++
+		fmt.Println(i)
+		fmt.Println(p)
+		//Stream1.Exec(`insert into a (id) values (?)`, 1)
 		//go InsertDb(p)
 		Dhq <- func() {
 			 InsertDb(p)
