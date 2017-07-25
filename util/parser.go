@@ -50,6 +50,7 @@ func (this *LogParser) Parse(msg string) *P {
 	}
 	if len(seg) == 16 && strings.Contains(seg[15].(string),"soooner_cache.log") {
 		p["time_local_origin"], _ = ToTime(ToString(seg[0])) // 本地时间
+		p["time1"] = p["time_local_origin"].(time.Time).Format("2006-01-02 15:04:05")
 		//s, _ := ToTime(ToString(seg[0]))
 		p["time_local"] = p["time_local_origin"].(time.Time).Format("2006-01-02") //只要年月日
 		//fmt.Println(strings.Split(s.Format("2006-01-02"),"-")[0])
@@ -116,7 +117,7 @@ func (this *LogParser) ParseBandwidth(p P) {
 	ct := p["time_local_origin"].(time.Time)
 	dur := p["request_time"].(float64)
 	st := ct.Add(-time.Duration(dur) * time.Second)
-	p["st"] = st
+	p["st"] = st.Format("2006-01-02 15:04:05")
 	bw := ToFloat(p["bytes_sent"]) * 8 / dur
 	p["bw"] = bw
 	delete(p, "time_local_origin")

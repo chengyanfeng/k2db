@@ -36,16 +36,16 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	Stream1, err = gorm.Open("postgres", "host=pipeline2 user=haproxy dbname=haproxy sslmode=disable password=haproxy123456")
-	defer Stream1.Close()
-	if err != nil {
-		panic(err)
-	}
-	Citus, err = gorm.Open("postgres", "host=citus1 user=postgres dbname=postgres sslmode=disable password=")
-	defer Citus.Close()
-	if err != nil {
-		panic(err)
-	}
+	//Stream1, err = gorm.Open("postgres", "host=pipeline2 user=haproxy dbname=haproxy sslmode=disable password=haproxy123456")
+	//defer Stream1.Close()
+	//if err != nil {
+	//	panic(err)
+	//}
+	//Citus, err = gorm.Open("postgres", "host=citus1 user=postgres dbname=postgres sslmode=disable password=")
+	//defer Citus.Close()
+	//if err != nil {
+	//	panic(err)
+	//}
 	//initConsumer()
 	//defer func() {
 	//	if err := KafkaConsumer.Close(); err != nil {
@@ -74,7 +74,7 @@ func Natscn(){
 		log.Fatalf("Can't connect: %v\n", err1)
 	}
 	// 订阅的subject
-	subj := "logp"
+	subj := "logq"
 
 	// 订阅主题, 当收到subject时候执行后面的func函数
 	// 返回值sub是subscription的实例
@@ -92,20 +92,29 @@ func Natscn(){
 	//	//	Error(err1)
 	//	//}
 	//}, stan.DurableName("cdn"))
-	var i int = 0
 	_, err := ns.Subscribe(subj, func(msg *stan.Msg){
 		//fmt.Printf("Received a message: %s\n", string(msg.Data))
 		parser := LogParser{}
 		p := parser.Parse(string(msg.Data))
-		Debug(p)
-		i++
-		fmt.Println(i)
-		fmt.Println(p)
-		//Stream1.Exec(`insert into a (id) values (?)`, 1)
+		//Debug(p)
+		//i++
+		//fmt.Println(i)
+		//fmt.Println(p)
+
 		//go InsertDb(p)
-		Dhq <- func() {
+		//Dhq <- func() {
 			 InsertDb(p)
-		}
+		//v := ""
+		//for j := 0; j < 10; j++ {
+		//	s :=string(msg.Data)
+		//	v = JoinStr(v, fmt.Sprintf("('%v'),", s))
+		//}
+		//v = v[0 : len(v)-1]
+		//sql := fmt.Sprintf("insert into s_test values %v", v)
+		//fmt.Println(sql)
+		//Stream.Exec(sql)
+		//Stream.Exec(`insert into s_test (msg) values (?)`, msg.Data)
+		//}
 	}, stan.DurableName("cdn"))
 	//qsub1.Unsubscribe()
 
@@ -117,6 +126,58 @@ func Natscn(){
 	log.Printf("Listening on [%s]\n", subj)
 	//保持连接
 	runtime.Goexit()
+}
+var i int = 0
+func InsertDb(p *P)  {
+	//todo
+	v := *p
+	i++
+	v1 := ""
+	v1 = JoinStr(v1, fmt.Sprintf("('%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v'),", v["time1"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"]))
+	//v1 = v1[0 : len(v1)-1]
+	v2 := append([]string{""}, v1)
+	fmt.Println(v2)
+	fmt.Println(len(v2))
+	fmt.Println(i)
+	fmt.Println("================================")
+	//if i % 10 == 0 {
+	//	v3 :=""
+	//	for j:=0; j<len(v2); j++{
+	//		v3 += v2[j]
+	//		v3 = v3[0 : len(v3)-1]
+	//		Debug(v3)
+	//	}
+	//	sql := fmt.Sprintf("insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values %v", v3)
+	//	Debug(sql)
+	//	Stream.Exec(sql)
+	//}
+
+	//Debug(v)
+	//defer func() {
+	//	if r := recover(); r != nil {
+	//		log.Println("pipelinedb1", r)
+	//	}
+	//}()
+	////往pipeline1中插数据
+	//Stream.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+	//	v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"])
+
+	//defer func() {
+	//	if r := recover(); r != nil {
+	//		log.Println("pipelinedb2", r)
+	//	}
+	//}()
+	////往pipeline2中插数据
+	//Stream1.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+	//	v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"])
+
+	//defer func() {
+	//	if r := recover(); r != nil {
+	//		log.Println("citus", r)
+	//	}
+	//}()
+	//Citus.Exec(`insert into u_log (time_local,spid,pid,userid,bytes_sent) values (?,?,?,?,?) on conflict(time_local,spid,pid,userid) do update set bytes_sent = u_log.bytes_sent + EXCLUDED.bytes_sent`,
+	//	v["time_local"], v["spid"], v["pid"], v["userid"], v["bytes_sent"])
 }
 
 func consume(topic string, f func(msg *ConsumerMessage)) {
@@ -187,38 +248,6 @@ func ProcLog(msg *ConsumerMessage) {
 	//} else {
 	//	Cmap.Set(msg.Topic, msg.Offset)
 	//}
-}
-
-func InsertDb(p *P)  {
-	v := *p
-
-	//todo
-	//Debug(v)
-	defer func() {
-		if r := recover(); r != nil {
-			log.Println("pipelinedb1", r)
-		}
-	}()
-	//往pipeline1中插数据
-	Stream.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"])
-
-	defer func() {
-		if r := recover(); r != nil {
-			log.Println("pipelinedb2", r)
-		}
-	}()
-	//往pipeline2中插数据
-	Stream1.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"])
-
-	defer func() {
-		if r := recover(); r != nil {
-			log.Println("citus", r)
-		}
-	}()
-	Citus.Exec(`insert into u_log (time_local,spid,pid,userid,bytes_sent) values (?,?,?,?,?) on conflict(time_local,spid,pid,userid) do update set bytes_sent = u_log.bytes_sent + EXCLUDED.bytes_sent`,
-		v["time_local"], v["spid"], v["pid"], v["userid"], v["bytes_sent"])
 }
 
 func LoadOffset(topic string) int64 {

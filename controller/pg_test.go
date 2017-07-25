@@ -59,6 +59,7 @@ func Benchmark_Insert(b *testing.B) {
 		name := JoinStr("name", i)
 		for j := 0; j < 10; j++ {
 			v = JoinStr(v, fmt.Sprintf("('%v','%v','%v','%v'),", i, name, DateTimeStr(), i))
+			Debug(v)
 		}
 		v = v[0 : len(v)-1]
 		sql := fmt.Sprintf("insert into t_1 values %v", v)
