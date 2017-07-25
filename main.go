@@ -16,7 +16,6 @@ import (
 	"encoding/json"
 	"runtime"
 	"github.com/nats-io/go-nats-streaming"
-	"github.com/jinzhu/gorm"
 	"fmt"
 )
 
@@ -29,13 +28,13 @@ func main() {
 	//beego.SetLogger("file", `{"filename":"logs/run.log"}`)
 	//beego.BeeLogger.SetLogFuncCallDepth(4)
 	LocalDb, _ = scribble.New("log", nil)
-	var err error
+	//var err error
 	// todo 配置通过文件读取
-	Stream, err = gorm.Open("postgres", "host=pipeline1 user=haproxy dbname=haproxy sslmode=disable password=haproxy123456")
-	defer Stream.Close()
-	if err != nil {
-		panic(err)
-	}
+	//Stream, err = gorm.Open("postgres", "host=pipeline1 user=haproxy dbname=haproxy sslmode=disable password=haproxy123456")
+	//defer Stream.Close()
+	//if err != nil {
+	//	panic(err)
+	//}
 	//Stream1, err = gorm.Open("postgres", "host=pipeline2 user=haproxy dbname=haproxy sslmode=disable password=haproxy123456")
 	//defer Stream1.Close()
 	//if err != nil {
@@ -55,7 +54,24 @@ func main() {
 	//go consume("log_topic", ProcLog)
 	//var MULTICORE int = runtime.NumCPU()
 	//runtime.GOMAXPROCS(MULTICORE)
-	go Natscn()
+
+
+	for j:=0;j<10;j++ {
+		i++
+		v1 := "sssssss"
+		ss = append(ss, v1)
+		if i%5 == 0 {
+			v3 :=""
+			for j:=0; j<len(ss); j++ {
+				v3 += ss[j]
+				v3 = v3[0 : len(v3)-1]
+			}
+			Debug(v3)
+		}
+	}
+
+
+	//go Natscn()
 	//go consume("ws_topic", ProcWs)
 	beego.Run()
 }
@@ -66,7 +82,7 @@ func Natscn(){
 
 	//stan.Connect(clusterID, clientID, ops ...Option)
 	ns, err1 := stan.Connect("my_cluster", "myid", stan.NatsURL("nats://172.16.102.133:9092,nats://172.16.102.134:9092,nats://172.16.102.135:9092"))
-	//ns, err1 := stan.Connect("my_cluster", "myiddd"+"-"+strconv.Itoa(i), stan.NatsURL("nats://111.206.135.107:9092"))
+	//ns, err1 := stan.Connect("my_cluster", "myiddd", stan.NatsURL("nats://111.206.135.107:9092"))
 
 	//ns.Publish("log", []byte("Hello World!1"))
 	//nc, err1 := nats.Connect("nats://172.16.102.133:9092,nats://172.16.102.134:9092,nats://172.16.102.135:9092")
@@ -96,6 +112,7 @@ func Natscn(){
 		//fmt.Printf("Received a message: %s\n", string(msg.Data))
 		parser := LogParser{}
 		p := parser.Parse(string(msg.Data))
+
 		//Debug(p)
 		//i++
 		//fmt.Println(i)
@@ -127,6 +144,7 @@ func Natscn(){
 	//保持连接
 	runtime.Goexit()
 }
+var ss []string
 var i int = 0
 func InsertDb(p *P)  {
 	//todo
@@ -135,22 +153,22 @@ func InsertDb(p *P)  {
 	v1 := ""
 	v1 = JoinStr(v1, fmt.Sprintf("('%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v'),", v["time1"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"]))
 	//v1 = v1[0 : len(v1)-1]
-	v2 := append([]string{""}, v1)
-	fmt.Println(v2)
-	fmt.Println(len(v2))
+	ss := append(ss, v1)
+	fmt.Println(ss)
+	fmt.Println(len(ss))
 	fmt.Println(i)
 	fmt.Println("================================")
-	//if i % 10 == 0 {
-	//	v3 :=""
-	//	for j:=0; j<len(v2); j++{
-	//		v3 += v2[j]
-	//		v3 = v3[0 : len(v3)-1]
-	//		Debug(v3)
-	//	}
-	//	sql := fmt.Sprintf("insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values %v", v3)
-	//	Debug(sql)
-	//	Stream.Exec(sql)
-	//}
+	if i % 10 == 0 {
+		v3 :=""
+		for j:=0; j<len(ss); j++ {
+			v3 += ss[j]
+			v3 = v3[0 : len(v3)-1]
+			Debug(v3)
+		}
+		sql := fmt.Sprintf("insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values %v", v3)
+		Debug(sql)
+		Stream.Exec(sql)
+	}
 
 	//Debug(v)
 	//defer func() {
