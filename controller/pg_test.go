@@ -3,12 +3,13 @@ package controller
 import (
 	. "k2db/util"
 	//. "github.com/Shopify/sarama"
+	"fmt"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	. "k2db/def"
+	"k2db/task"
 	"testing"
 	"time"
-	"k2db/task"
 )
 
 type User struct {
@@ -20,7 +21,7 @@ type User struct {
 
 func init() {
 	var err error
-	Stream, err = gorm.Open("postgres", "host=localhost user=dh dbname=dh sslmode=disable password=")
+	Stream, err = gorm.Open("postgres", "host=localhost user=altman dbname=postgres sslmode=disable password=")
 	//defer Stream.Close()
 	Error(err)
 }
@@ -50,6 +51,39 @@ func BenchmarkPipeline(b *testing.B) {
 			Stream.Exec(`insert into s_demo values (?,?,?,?)`, i, name, time.Now(), float32(i))
 		}
 	}
+}
+
+func Benchmark_Insert(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		v := ""
+		name := JoinStr("name", i)
+		for j := 0; j < 10; j++ {
+			v = JoinStr(v, fmt.Sprintf("('%v','%v','%v','%v'),", i, name, DateTimeStr(), i))
+		}
+		v = v[0 : len(v)-1]
+		sql := fmt.Sprintf("insert into t_1 values %v", v)
+		//Debug(sql)
+		Stream.Exec(sql)
+	}
+}
+
+func Benchmark_Insert2(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		tx := Stream.Begin()
+		for j := 0; j < 100; j++ {
+			name := JoinStr("name", i)
+			tx.Exec(`insert into t_1 values (?,?,?,?)`, i, name, time.Now(), float32(i))
+		}
+		tx.Commit()
+	}
+}
+
+func Test_Insert(t *testing.T) {
+	i := 0
+	name := JoinStr("name", i)
+	Stream.Begin()
+	Stream.Exec(`insert into t_1 values (?,?,?,?)`, i, name, time.Now(), float32(i))
+	Stream.Commit()
 }
 
 func Test_Pg2(t *testing.T) {
