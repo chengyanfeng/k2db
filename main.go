@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"runtime"
 	"github.com/nats-io/go-nats-streaming"
+	"github.com/jinzhu/gorm"
 	"fmt"
 )
 
@@ -28,18 +29,18 @@ func main() {
 	//beego.SetLogger("file", `{"filename":"logs/run.log"}`)
 	//beego.BeeLogger.SetLogFuncCallDepth(4)
 	LocalDb, _ = scribble.New("log", nil)
-	//var err error
+	var err error
 	// todo 配置通过文件读取
-	//Stream, err = gorm.Open("postgres", "host=pipeline1 user=haproxy dbname=haproxy sslmode=disable password=haproxy123456")
-	//defer Stream.Close()
-	//if err != nil {
-	//	panic(err)
-	//}
-	//Stream1, err = gorm.Open("postgres", "host=pipeline2 user=haproxy dbname=haproxy sslmode=disable password=haproxy123456")
-	//defer Stream1.Close()
-	//if err != nil {
-	//	panic(err)
-	//}
+	Stream, err = gorm.Open("postgres", "host=pipeline1 user=haproxy dbname=haproxy sslmode=disable password=haproxy123456")
+	defer Stream.Close()
+	if err != nil {
+		panic(err)
+	}
+	Stream1, err = gorm.Open("postgres", "host=pipeline2 user=haproxy dbname=haproxy sslmode=disable password=haproxy123456")
+	defer Stream1.Close()
+	if err != nil {
+		panic(err)
+	}
 	//Citus, err = gorm.Open("postgres", "host=citus1 user=postgres dbname=postgres sslmode=disable password=")
 	//defer Citus.Close()
 	//if err != nil {
@@ -56,22 +57,26 @@ func main() {
 	//runtime.GOMAXPROCS(MULTICORE)
 
 
-	//for j:=0;j<10;j++ {
+	//for j:=0;j<4;j++ {
 	//	i++
 	//	v1 := "sssssss"
-	//	ss = append(ss, v1)
-	//	if i%5 == 0 {
+	//	v2 := "ddddddd"
+	//	v3 := "fffffff"
+	//	ss = append(ss, v1, v2, v3)
+	//	if i%2 == 0 {
 	//		v3 :=""
 	//		for j:=0; j<len(ss); j++ {
 	//			v3 += ss[j]
 	//			v3 = v3[0 : len(v3)-1]
 	//		}
 	//		Debug(v3)
+	//		ss = append(ss[:0],ss[len(ss):]...)
 	//	}
 	//}
 
 
-	//go Natscn()
+
+	go Natscn()
 	//go consume("ws_topic", ProcWs)
 	beego.Run()
 }
@@ -95,53 +100,57 @@ func Natscn(){
 	// 订阅主题, 当收到subject时候执行后面的func函数
 	// 返回值sub是subscription的实例
 	// Async Subscriber
-	//qsub1, err := ns.QueueSubscribe(subj, "bar",func(msg *stan.Msg){
-	//	fmt.Printf("Received a message: %s\n", string(msg.Data))
+	//_, err :=ns.QueueSubscribe(subj, "bar1",func(msg *stan.Msg){
+	//	//fmt.Printf("Received a message: %s\n", string(msg.Data))
 	//	parser := LogParser{}
 	//	p := parser.Parse(string(msg.Data))
 	//	Debug(p)
-	//	Stream.Exec(`insert into s_log1 (msg) values (?)`,
-	//		msg.Data)
+	//	//Stream.Exec(`insert into s_test (msg) values (?)`,
 	//
-	//	//err1 := InsertDb(p)
-	//	//if err1 != nil {
-	//	//	Error(err1)
-	//	//}
-	//}, stan.DurableName("cdn"))
+	//		v := *p
+	//		i++
+	//		v1 = JoinStr(v1, fmt.Sprintf("('%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v'),", v["time1"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"]))
+	//		//Debug(i)
+	//		if i%100 == 0 {
+	//			v1 = v1[0 : len(v1)-1]
+	//			sql := fmt.Sprintf("insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values %v", v1)
+	//			//Debug(sql)
+	//			InsertDb(sql)
+	//			v1 =""
+	//		}
+	//}, stan.DurableName("cdn1"))
+
+	//v1 := ""
 	_, err := ns.Subscribe(subj, func(msg *stan.Msg){
 		//fmt.Printf("Received a message: %s\n", string(msg.Data))
 		parser := LogParser{}
 		p := parser.Parse(string(msg.Data))
 
 		//Debug(p)
-		//i++
-		//fmt.Println(i)
 		//fmt.Println(p)
 		v := *p
 		i++
-		v1 := ""
 		v1 = JoinStr(v1, fmt.Sprintf("('%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v'),", v["time1"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"]))
-		//v1 = v1[0 : len(v1)-1]
-		ss = append(ss, v1)
-		fmt.Println(ss)
-		fmt.Println(len(ss))
-		fmt.Println(i)
-		fmt.Println("================================")
-		if i % 10 == 0 {
-			v3 :=""
-			for j:=0; j<len(ss); j++ {
-				v3 += ss[j]
-				v3 = v3[0 : len(v3)-1]
-				Debug(v3)
-			}
-			sql := fmt.Sprintf("insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values %v", v3)
-			Debug(sql)
-			Stream.Exec(sql)
+		//Debug(i)
+		//ss = append(ss, v1)
+		if i%100 == 0 {
+			v1 = v1[0 : len(v1)-1]
+			//v3 :=""
+			//for j:=0; j<len(ss); j++ {
+			//	v3 = ss[len(ss)-1]
+			//}
+			//v3 = v3[0 : len(v3)-1]
+			//Debug(v1)
+			sql := fmt.Sprintf("insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values %v", v1)
+			//Debug(sql)
+			InsertDb(sql)
+			//ss = append(ss[:0], ss[len(ss):]...)
+			v1 =""
 		}
 
 		//go InsertDb(p)
 		//Dhq <- func() {
-			 InsertDb(p)
+		//	 InsertDb(p)
 		//v := ""
 		//for j := 0; j < 10; j++ {
 		//	s :=string(msg.Data)
@@ -154,7 +163,6 @@ func Natscn(){
 		//Stream.Exec(`insert into s_test (msg) values (?)`, msg.Data)
 		//}
 	}, stan.DurableName("cdn"))
-	//qsub1.Unsubscribe()
 
 	if err != nil {
 		ns.Close()
@@ -166,31 +174,22 @@ func Natscn(){
 	runtime.Goexit()
 }
 var ss []string
-var i int = 0
-func InsertDb(p *P)  {
+var i = 0
+var v1 = ""
+func InsertDb(sql string)  {
 	//todo
-	v := *p
-	i++
-	v1 := ""
-	v1 = JoinStr(v1, fmt.Sprintf("('%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v'),", v["time1"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"]))
-	//v1 = v1[0 : len(v1)-1]
-	ss = append(ss, v1)
-	fmt.Println(ss)
-	fmt.Println(len(ss))
-	fmt.Println(i)
-	fmt.Println("================================")
-	if i % 10 == 0 {
-		v3 :=""
-		for j:=0; j<len(ss); j++ {
-			v3 += ss[j]
-			v3 = v3[0 : len(v3)-1]
-			Debug(v3)
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("pipelinedb1", r)
 		}
-		sql := fmt.Sprintf("insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values %v", v3)
-		Debug(sql)
-		Stream.Exec(sql)
-	}
-
+	}()
+	Stream.Exec(sql)
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("pipelinedb2", r)
+		}
+	}()
+	Stream1.Exec(sql)
 	//Debug(v)
 	//defer func() {
 	//	if r := recover(); r != nil {
