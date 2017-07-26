@@ -56,19 +56,19 @@ func main() {
 	//runtime.GOMAXPROCS(MULTICORE)
 
 
-	for j:=0;j<10;j++ {
-		i++
-		v1 := "sssssss"
-		ss = append(ss, v1)
-		if i%5 == 0 {
-			v3 :=""
-			for j:=0; j<len(ss); j++ {
-				v3 += ss[j]
-				v3 = v3[0 : len(v3)-1]
-			}
-			Debug(v3)
-		}
-	}
+	//for j:=0;j<10;j++ {
+	//	i++
+	//	v1 := "sssssss"
+	//	ss = append(ss, v1)
+	//	if i%5 == 0 {
+	//		v3 :=""
+	//		for j:=0; j<len(ss); j++ {
+	//			v3 += ss[j]
+	//			v3 = v3[0 : len(v3)-1]
+	//		}
+	//		Debug(v3)
+	//	}
+	//}
 
 
 	//go Natscn()
@@ -117,6 +117,27 @@ func Natscn(){
 		//i++
 		//fmt.Println(i)
 		//fmt.Println(p)
+		v := *p
+		i++
+		v1 := ""
+		v1 = JoinStr(v1, fmt.Sprintf("('%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v'),", v["time1"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"]))
+		//v1 = v1[0 : len(v1)-1]
+		ss = append(ss, v1)
+		fmt.Println(ss)
+		fmt.Println(len(ss))
+		fmt.Println(i)
+		fmt.Println("================================")
+		if i % 10 == 0 {
+			v3 :=""
+			for j:=0; j<len(ss); j++ {
+				v3 += ss[j]
+				v3 = v3[0 : len(v3)-1]
+				Debug(v3)
+			}
+			sql := fmt.Sprintf("insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values %v", v3)
+			Debug(sql)
+			Stream.Exec(sql)
+		}
 
 		//go InsertDb(p)
 		//Dhq <- func() {
@@ -153,7 +174,7 @@ func InsertDb(p *P)  {
 	v1 := ""
 	v1 = JoinStr(v1, fmt.Sprintf("('%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v'),", v["time1"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"]))
 	//v1 = v1[0 : len(v1)-1]
-	ss := append(ss, v1)
+	ss = append(ss, v1)
 	fmt.Println(ss)
 	fmt.Println(len(ss))
 	fmt.Println(i)
