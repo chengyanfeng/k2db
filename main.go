@@ -15,9 +15,9 @@ import (
 	"time"
 	"encoding/json"
 	"runtime"
-	"github.com/nats-io/go-nats-streaming"
 	"github.com/jinzhu/gorm"
 	"fmt"
+	"github.com/nats-io/go-nats"
 )
 
 func main() {
@@ -73,9 +73,6 @@ func main() {
 	//		ss = append(ss[:0],ss[len(ss):]...)
 	//	}
 	//}
-
-
-
 	go Natscn()
 	//go consume("ws_topic", ProcWs)
 	beego.Run()
@@ -86,16 +83,16 @@ func Natscn(){
 	//nc, err1 := nats.Connect("nats://111.206.135.105:9092")
 
 	//stan.Connect(clusterID, clientID, ops ...Option)
-	ns, err1 := stan.Connect("my_cluster", "myid", stan.NatsURL("nats://172.16.102.133:9092,nats://172.16.102.134:9092,nats://172.16.102.135:9092"))
+	//ns, err1 := stan.Connect("my_cluster", "myid", stan.NatsURL("nats://172.16.102.133:9092,nats://172.16.102.134:9092,nats://172.16.102.135:9092"))
 	//ns, err1 := stan.Connect("my_cluster", "myiddd", stan.NatsURL("nats://111.206.135.107:9092"))
 
 	//ns.Publish("log", []byte("Hello World!1"))
-	//nc, err1 := nats.Connect("nats://172.16.102.133:9092,nats://172.16.102.134:9092,nats://172.16.102.135:9092")
+	nc, err1 := nats.Connect("nats://172.16.102.133:9092,nats://172.16.102.134:9092,nats://172.16.102.135:9092")
 	if err1 != nil {
 		log.Fatalf("Can't connect: %v\n", err1)
 	}
 	// 订阅的subject
-	subj := "logq"
+	subj := "log"
 
 	// 订阅主题, 当收到subject时候执行后面的func函数
 	// 返回值sub是subscription的实例
@@ -120,8 +117,7 @@ func Natscn(){
 	//		}
 	//}, stan.DurableName("cdn1"))
 
-	//v1 := ""
-	_, err := ns.Subscribe(subj, func(msg *stan.Msg){
+	nc.Subscribe(subj, func(msg *nats.Msg){
 		//fmt.Printf("Received a message: %s\n", string(msg.Data))
 		parser := LogParser{}
 		p := parser.Parse(string(msg.Data))
@@ -131,9 +127,9 @@ func Natscn(){
 		v := *p
 		i++
 		v1 = JoinStr(v1, fmt.Sprintf("('%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v'),", v["time1"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"]))
-		//Debug(i)
+		Debug(i)
 		//ss = append(ss, v1)
-		if i%100 == 0 {
+		if i%50 == 0 {
 			v1 = v1[0 : len(v1)-1]
 			//v3 :=""
 			//for j:=0; j<len(ss); j++ {
@@ -162,13 +158,13 @@ func Natscn(){
 		//Stream.Exec(sql)
 		//Stream.Exec(`insert into s_test (msg) values (?)`, msg.Data)
 		//}
-	}, stan.DurableName("cdn"))
+	})
 
-	if err != nil {
-		ns.Close()
-		log.Fatal(err)
-	}
-	//nc.Flush()
+	//if err != nil {
+	//	ns.Close()
+	//	log.Fatal(err)
+	//}
+	nc.Flush()
 	log.Printf("Listening on [%s]\n", subj)
 	//保持连接
 	runtime.Goexit()
@@ -183,12 +179,14 @@ func InsertDb(sql string)  {
 			log.Println("pipelinedb1", r)
 		}
 	}()
+	//往pipeline1中插数据
 	Stream.Exec(sql)
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("pipelinedb2", r)
 		}
 	}()
+	//往pipeline2中插数据
 	Stream1.Exec(sql)
 	//Debug(v)
 	//defer func() {
