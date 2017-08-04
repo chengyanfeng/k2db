@@ -19,7 +19,7 @@ func (this *LogParser1) Parse1 (msg string) *P {
 		return &p
 	}
 	if len(seg) == 5 {
-		p["time_local"], _ = ToTime(ToString(seg[0]))
+		p["time_local"] = ToString(seg[0])
 		p["spid"] = seg[1]
 		p["pid"] = seg[2]
 		p["dhbeat_hostname"] = seg[3]
