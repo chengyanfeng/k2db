@@ -3,6 +3,8 @@ package util
 import (
 	"encoding/json"
 	"testing"
+	"strings"
+	"fmt"
 )
 
 func TestLogParser_Parse(t *testing.T) {
@@ -12,6 +14,16 @@ func TestLogParser_Parse(t *testing.T) {
 	//msg := ""
 	p := parser.Parse(msg)
 	Debug(JsonEncode(p))
+}
+
+func TestLogParser_Parse1(t *testing.T) {
+	msg :="s1|s2|s3"
+	tmp := strings.Split(msg, "|")
+	seg := []interface{}{}
+	for _, v := range tmp {
+		seg = append(seg, v)
+	}
+	fmt.Println(seg, seg[1])
 }
 
 // 测试filebeat包装过的数据

@@ -101,26 +101,25 @@ func Natscn(){
 	//}, stan.DurableName("cdn1"))
 
 	_, err :=nc.Subscribe(subj, func(msg *nats.Msg){
-		//fmt.Printf("Received a message: %s\n", string(msg.Data))
-		parser := LogParser{}
-		p := parser.Parse(string(msg.Data))
+		fmt.Printf("Received a message: %s\n", string(msg.Data))
+		parser := LogParser1{}
+		p := parser.Parse1(string(msg.Data))
 
 		//Debug(p)
 		//fmt.Println(p)
 		v := *p
 		i++
-		v1 = JoinStr(v1, fmt.Sprintf("('%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v'),", v["time1"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"]))
-		//Debug(i,p)
+		v1 = JoinStr(v1, fmt.Sprintf("('%v','%v','%v','%v','%v'),", v["time_local"],v["dhbeat_hostname"],v["spid"],v["pid"],v["bw"]))
 		Debug(i)
 		//ss = append(ss, v1)
-		if i%50 == 0 {
+		if i%10 == 0 {
 			v1 = v1[0 : len(v1)-1]
 			//v3 :=""
 			//	v3 = ss[len(ss)-1]
 			//v3 = v3[0 : len(v3)-1]
 			//Debug(v1)
-			sql := fmt.Sprintf("insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values %v", v1)
-			//Debug(sql)
+			sql := fmt.Sprintf("insert into s_log (time_local,dhbeat_hostname,spid,pid,bw) values %v", v1)
+			Debug(sql)
 			InsertDb(sql)
 			//ss = append(ss[:0], ss[len(ss):]...)
 			v1 =""
