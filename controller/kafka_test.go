@@ -2,7 +2,7 @@ package controller
 
 import (
 	. "github.com/Shopify/sarama"
-	. "k2db/util"
+	. "k2dbAccess/util"
 	"log"
 	"os"
 	"os/signal"
@@ -11,7 +11,9 @@ import (
 
 //
 func Test_kafka(t *testing.T) {
-	consumer, err := NewConsumer([]string{"kafka:9092"}, nil)
+	//consumer, err := NewConsumer([]string{"111.206.135.105:9092","111.206.135.106:9092","111.206.135.107:9092"}, nil)
+	consumer, err := NewConsumer([]string{"192.168.112.132:9092"}, nil)
+
 	if err != nil {
 		panic(err)
 	}

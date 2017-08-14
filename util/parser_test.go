@@ -17,13 +17,14 @@ func TestLogParser_Parse(t *testing.T) {
 }
 
 func TestLogParser_Parse1(t *testing.T) {
-	msg :="s1|s2|s3"
+	msg :="2017-08-11 13:30:00|17631322508|2017-08-11 13:30:22|21130|111.202.83.63:809|0|328"
 	tmp := strings.Split(msg, "|")
 	seg := []interface{}{}
+	fmt.Println(len(tmp))
 	for _, v := range tmp {
 		seg = append(seg, v)
 	}
-	fmt.Println(seg, seg[1])
+	fmt.Println(seg, seg[1],len(seg))
 }
 
 // 测试filebeat包装过的数据

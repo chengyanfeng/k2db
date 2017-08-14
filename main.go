@@ -5,10 +5,10 @@ import (
 	"github.com/astaxie/beego"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/nanobox-io/golang-scribble"
-	. "k2db/controller"
-	. "k2db/def"
-	. "k2db/task"
-	. "k2db/util"
+	. "k2dbAccess/controller"
+	. "k2dbAccess/def"
+	. "k2dbAccess/task"
+	. "k2dbAccess/util"
 	"log"
 	"os"
 	"os/signal"
@@ -21,7 +21,7 @@ import (
 )
 
 func main() {
-	beego.BConfig.Listen.HTTPPort = ToInt(Trim(os.Getenv("port")), 7878)
+	beego.BConfig.Listen.HTTPPort = ToInt(Trim(os.Getenv("port")), 7876)
 	beego.BConfig.RecoverPanic = true
 	beego.BConfig.EnableErrorsShow = true
 	beego.AutoRouter(&ApiController{})
@@ -31,33 +31,12 @@ func main() {
 	LocalDb, _ = scribble.New("log", nil)
 	var err error
 	// todo 配置通过文件读取
-	Stream, err = gorm.Open("postgres", "host=pipeline1 user=haproxy dbname=haproxy sslmode=disable password=haproxy123456")
-	defer Stream.Close()
+	Citus, err = gorm.Open("postgres", "host=citus1 user=postgres dbname=postgres sslmode=disable password=")
+	defer Citus.Close()
 	if err != nil {
 		panic(err)
 	}
-	Stream1, err = gorm.Open("postgres", "host=pipeline2 user=haproxy dbname=haproxy sslmode=disable password=haproxy123456")
-	defer Stream1.Close()
-	if err != nil {
-		panic(err)
-	}
-	//Citus, err = gorm.Open("postgres", "host=citus1 user=postgres dbname=postgres sslmode=disable password=")
-	//defer Citus.Close()
-	//if err != nil {
-	//	panic(err)
-	//}
-	//initConsumer()
-	//defer func() {
-	//	if err := KafkaConsumer.Close(); err != nil {
-	//		log.Fatalln(err)
-	//	}
-	//}()
-	//go consume("log_topic", ProcLog)
-	//var MULTICORE int = runtime.NumCPU()
-	//runtime.GOMAXPROCS(MULTICORE)
-
 	go Natscn()
-	//go consume("ws_topic", ProcWs)
 	beego.Run()
 }
 
@@ -75,8 +54,9 @@ func Natscn(){
 		log.Fatalf("Can't connect: %v\n", err1)
 	}
 	// 订阅的subject
-	subj, i := "log", 0
-	v1 :=""
+	subj := "access"
+	//subj, i := "access", 0
+	//v1 :=""
 	// 订阅主题, 当收到subject时候执行后面的func函数
 	// 返回值sub是subscription的实例
 	// Async Subscriber
@@ -107,23 +87,23 @@ func Natscn(){
 
 		//Debug(p)
 		//fmt.Println(p)
-		v := *p
-		i++
-		v1 = JoinStr(v1, fmt.Sprintf("('%v','%v','%v','%v','%v'),", v["time_local"],v["dhbeat_hostname"],v["spid"],v["pid"],v["bw"]))
-		Debug(i)
+		//v := *p
+		//i++
+		//v1 = JoinStr(v1, fmt.Sprintf("('%v','%v','%v','%v','%v','%v'),", v["userid"],v["tohost"],v["spid"],v["start_time"],v["err_code"],v["times"]))
+		//Debug(i)
 		//ss = append(ss, v1)
-		if i%10 == 0 {
-			v1 = v1[0 : len(v1)-1]
-			//v3 :=""
+	//	if i%10 == 0 {
+	//		v1 = v1[0 : len(v1)-1]
+		//	v3 :=""
 			//	v3 = ss[len(ss)-1]
-			//v3 = v3[0 : len(v3)-1]
-			//Debug(v1)
-			sql := fmt.Sprintf("insert into s_log (time_local,dhbeat_hostname,spid,pid,bw) values %v", v1)
-			Debug(sql)
-			InsertDb(sql)
+		//	v3 = v3[0 : len(v3)-1]
+	//		Debug(v1)
+	//		sql := fmt.Sprintf("insert into access (userid,tohost,spid,start_time,err_code,times) values %v", v1)
+	//		Debug(sql)
+			InsertDb(*p)
 			//ss = append(ss[:0], ss[len(ss):]...)
-			v1 =""
-		}
+		//	v1 =""
+	//	}
 		//go InsertDb(p)
 		//Dhq <- func() {
 		//	 InsertDb(p)
@@ -140,48 +120,19 @@ func Natscn(){
 	runtime.Goexit()
 }
 
-func InsertDb(sql string)  {
+func InsertDb(v P)  {
 	//todo
 	defer func() {
-		if r := recover(); r != nil {
-			log.Println("pipelinedb1", r)
+	if r := recover(); r != nil {
+		log.Println("Citus", r)
 		}
 	}()
-	//往pipeline1中插数据
-	Stream.Exec(sql)
-	defer func() {
-		if r := recover(); r != nil {
-			log.Println("pipelinedb2", r)
-		}
-	}()
-	//往pipeline2中插数据
-	Stream1.Exec(sql)
-	//Debug(v)
-	//defer func() {
-	//	if r := recover(); r != nil {
-	//		log.Println("pipelinedb1", r)
-	//	}
-	//}()
-	////往pipeline1中插数据
-	//Stream.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-	//	v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"])
+	Citus.Exec(`insert into access (userid,tohost,spid,start_time,err_code,times) values (?,?,?,?,?,?) `,
+		v["userid"], v["tohost"], v["spid"], v["start_time"], v["err_code"], v["times"])
 
-	//defer func() {
-	//	if r := recover(); r != nil {
-	//		log.Println("pipelinedb2", r)
-	//	}
-	//}()
-	////往pipeline2中插数据
-	//Stream1.Exec(`insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-	//	v["time_local"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"])
-
-	//defer func() {
-	//	if r := recover(); r != nil {
-	//		log.Println("citus", r)
-	//	}
-	//}()
 	//Citus.Exec(`insert into u_log (time_local,spid,pid,userid,bytes_sent) values (?,?,?,?,?) on conflict(time_local,spid,pid,userid) do update set bytes_sent = u_log.bytes_sent + EXCLUDED.bytes_sent`,
 	//	v["time_local"], v["spid"], v["pid"], v["userid"], v["bytes_sent"])
+
 }
 
 func consume(topic string, f func(msg *ConsumerMessage)) {
