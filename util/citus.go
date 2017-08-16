@@ -1,7 +1,7 @@
 package util
 
 import (
-	. "k2dbAccess/def"
+	. "k2db/def"
 	"reflect"
 )
 

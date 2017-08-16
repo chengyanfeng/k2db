@@ -3,7 +3,7 @@ package controller
 import (
 	//. "k2db/def"
 	"errors"
-	. "k2dbAccess/util"
+	. "k2db/util"
 	//"fmt"
 	. "github.com/Shopify/sarama"
 	"github.com/gorilla/websocket"

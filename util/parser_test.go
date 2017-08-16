@@ -8,16 +8,16 @@ import (
 )
 
 func TestLogParser_Parse(t *testing.T) {
-	parser := LogParser{}
-	msg := ReadFile("sample3.txt")
+	parser := LogParser1{}
+	msg := ReadFile("sample.txt")
 
 	//msg := ""
-	p := parser.Parse(msg)
+	p := parser.Parse1(msg)
 	Debug(JsonEncode(p))
 }
 
 func TestLogParser_Parse1(t *testing.T) {
-	msg :="2017-08-11 13:30:00|17631322508|2017-08-11 13:30:22|21130|111.202.83.63:809|0|328"
+	msg :="17665451650|21130|31.698|2017-07-29 23:00:00|15|157.255.41.144|null|null"
 	tmp := strings.Split(msg, "|")
 	seg := []interface{}{}
 	fmt.Println(len(tmp))

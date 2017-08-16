@@ -1,13 +1,13 @@
 package controller
 
 import (
-	. "k2dbAccess/util"
+	. "k2db/util"
 	//. "github.com/Shopify/sarama"
 	"fmt"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
-	. "k2dbAccess/def"
-	"k2dbAccess/task"
+	. "k2db/def"
+	"k2db/task"
 	"testing"
 	"time"
 )

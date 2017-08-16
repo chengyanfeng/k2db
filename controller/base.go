@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/astaxie/beego"
 	"gopkg.in/mgo.v2/bson"
-	. "k2dbAccess/def"
-	. "k2dbAccess/util"
+	. "k2db/def"
+	. "k2db/util"
 )
 
 type BaseController struct {

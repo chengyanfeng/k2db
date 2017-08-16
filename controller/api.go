@@ -2,8 +2,8 @@ package controller
 
 import (
 	"github.com/astaxie/beego"
-	. "k2dbAccess/def"
-	. "k2dbAccess/util"
+	. "k2db/def"
+	. "k2db/util"
 	"os"
 	"runtime"
 )

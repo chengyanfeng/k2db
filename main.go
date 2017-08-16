@@ -5,10 +5,10 @@ import (
 	"github.com/astaxie/beego"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/nanobox-io/golang-scribble"
-	. "k2dbAccess/controller"
-	. "k2dbAccess/def"
-	. "k2dbAccess/task"
-	. "k2dbAccess/util"
+	. "k2db/controller"
+	. "k2db/def"
+	. "k2db/task"
+	. "k2db/util"
 	"log"
 	"os"
 	"os/signal"
@@ -16,12 +16,12 @@ import (
 	"encoding/json"
 	"runtime"
 	"github.com/nats-io/go-nats"
-	"fmt"
 	"github.com/jinzhu/gorm"
 )
 
 func main() {
-	beego.BConfig.Listen.HTTPPort = ToInt(Trim(os.Getenv("port")), 7876)
+	initConf()
+	beego.BConfig.Listen.HTTPPort = ToInt(Trim(os.Getenv("port")), 7877)
 	beego.BConfig.RecoverPanic = true
 	beego.BConfig.EnableErrorsShow = true
 	beego.AutoRouter(&ApiController{})
@@ -31,7 +31,7 @@ func main() {
 	LocalDb, _ = scribble.New("log", nil)
 	var err error
 	// todo 配置通过文件读取
-	Citus, err = gorm.Open("postgres", "host=citus1 user=postgres dbname=postgres sslmode=disable password=")
+	Citus, err = gorm.Open("postgres", CITUS_PARA)
 	defer Citus.Close()
 	if err != nil {
 		panic(err)
@@ -39,75 +39,30 @@ func main() {
 	go Natscn()
 	beego.Run()
 }
-
+func initConf(){
+	conf := new(Conf)
+	confMap := conf.InitConfig("./","k2db.ini","k2db")
+	NATS_PARA = confMap["nats_para"]
+	CITUS_PARA = confMap["citus_para"]
+	SUBJ = confMap["subj"]
+}
 func Natscn(){
 	//server的连接
-	//nc, err1 := nats.Connect("nats://111.206.135.105:9092,nats://111.206.135.106:9092,nats://111.206.135.107:9092")
-
-	//stan.Connect(clusterID, clientID, ops ...Option)
-	//ns, err1 := stan.Connect("my_cluster", "myid", stan.NatsURL("nats://172.16.102.133:9092,nats://172.16.102.134:9092,nats://172.16.102.135:9092"))
-	//ns, err1 := stan.Connect("my_cluster", "myiddd", stan.NatsURL("nats://111.206.135.107:9092"))
-
-	//ns.Publish("log", []byte("Hello World!1"))
-	nc, err1 := nats.Connect("nats://172.16.102.133:9092,nats://172.16.102.134:9092,nats://172.16.102.135:9092")
+	nc, err1 := nats.Connect(NATS_PARA)
 	if err1 != nil {
 		log.Fatalf("Can't connect: %v\n", err1)
 	}
 	// 订阅的subject
-	subj := "access"
-	//subj, i := "access", 0
-	//v1 :=""
-	// 订阅主题, 当收到subject时候执行后面的func函数
-	// 返回值sub是subscription的实例
-	// Async Subscriber
-	//_, err :=ns.QueueSubscribe(subj, "bar1",func(msg *stan.Msg){
-	//	//fmt.Printf("Received a message: %s\n", string(msg.Data))
-	//	parser := LogParser{}
-	//	p := parser.Parse(string(msg.Data))
-	//	Debug(p)
-	//	//Stream.Exec(`insert into s_test (msg) values (?)`,
-	//
-	//		v := *p
-	//		i++
-	//		v1 = JoinStr(v1, fmt.Sprintf("('%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v','%v'),", v["time1"],v["request_time"],v["remote_addr"],v["status"],v["err_code"],v["request_length"],v["bytes_sent"],v["request_method"],v["http_referer"],v["http_user_agent"],v["cache_status"],v["dhbeat_hostname"],v["userip"],v["spid"],v["pid"],v["spport"],v["userid"],v["portalid"],v["spip"],v["st"],v["bw"]))
-	//		//Debug(i)
-	//		if i%100 == 0 {
-	//			v1 = v1[0 : len(v1)-1]
-	//			sql := fmt.Sprintf("insert into s_log (time_local,request_time,remote_addr,status,err_code,request_length,bytes_sent,request_method,http_referer,http_user_agent,cache_status,dhbeat_hostname,userip,spid,pid,spport,userid,portalid,spip,st,bw) values %v", v1)
-	//			//Debug(sql)
-	//			InsertDb(sql)
-	//			v1 =""
-	//		}
-	//}, stan.DurableName("cdn1"))
-
-	_, err :=nc.Subscribe(subj, func(msg *nats.Msg){
-		fmt.Printf("Received a message: %s\n", string(msg.Data))
+	_, err :=nc.Subscribe(SUBJ, func(msg *nats.Msg){
+		Debug("Received a message: %s\n", string(msg.Data))
 		parser := LogParser1{}
 		p := parser.Parse1(string(msg.Data))
 
-		//Debug(p)
-		//fmt.Println(p)
-		//v := *p
-		//i++
-		//v1 = JoinStr(v1, fmt.Sprintf("('%v','%v','%v','%v','%v','%v'),", v["userid"],v["tohost"],v["spid"],v["start_time"],v["err_code"],v["times"]))
-		//Debug(i)
-		//ss = append(ss, v1)
-	//	if i%10 == 0 {
-	//		v1 = v1[0 : len(v1)-1]
-		//	v3 :=""
-			//	v3 = ss[len(ss)-1]
-		//	v3 = v3[0 : len(v3)-1]
-	//		Debug(v1)
-	//		sql := fmt.Sprintf("insert into access (userid,tohost,spid,start_time,err_code,times) values %v", v1)
-	//		Debug(sql)
-			InsertDb(*p)
-			//ss = append(ss[:0], ss[len(ss):]...)
-		//	v1 =""
-	//	}
-		//go InsertDb(p)
-		//Dhq <- func() {
-		//	 InsertDb(p)
-		//}
+	//	InsertDb(*p)
+	//	go InsertDb(p)
+		Dhq <- func() {
+			 InsertDb(*p)
+		}
 	})
 
 	if err != nil {
@@ -115,7 +70,7 @@ func Natscn(){
 		log.Fatal(err)
 	}
 	nc.Flush()
-	log.Printf("Listening on [%s]\n", subj)
+	log.Printf("Listening on [%s]\n", SUBJ)
 	//保持连接
 	runtime.Goexit()
 }
@@ -127,11 +82,8 @@ func InsertDb(v P)  {
 		log.Println("Citus", r)
 		}
 	}()
-	Citus.Exec(`insert into access (userid,tohost,spid,start_time,err_code,times) values (?,?,?,?,?,?) `,
-		v["userid"], v["tohost"], v["spid"], v["start_time"], v["err_code"], v["times"])
-
-	//Citus.Exec(`insert into u_log (time_local,spid,pid,userid,bytes_sent) values (?,?,?,?,?) on conflict(time_local,spid,pid,userid) do update set bytes_sent = u_log.bytes_sent + EXCLUDED.bytes_sent`,
-	//	v["time_local"], v["spid"], v["pid"], v["userid"], v["bytes_sent"])
+	Citus.Exec(`insert into flow (time_inter,userid,spid,flow_rate) values (?,?,?,?) `,
+		v["time_inter"], v["userid"], v["spid"], v["flow_rate"])
 
 }
 

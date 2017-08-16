@@ -18,6 +18,9 @@ var Stream1  *gorm.DB
 var Citus *gorm.DB
 var UPTIME = time.Now().UnixNano() / int64(time.Millisecond)
 var URL string
+var NATS_PARA string
+var CITUS_PARA string
+var SUBJ string
 const (
 	Cname string = "job"
 )

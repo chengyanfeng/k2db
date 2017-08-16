@@ -2,7 +2,7 @@ package controller
 
 import (
 	. "github.com/Shopify/sarama"
-	. "k2dbAccess/util"
+	. "k2db/util"
 	"log"
 	"os"
 	"os/signal"
