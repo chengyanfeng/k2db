@@ -4,15 +4,11 @@ import (
 	"sync"
 )
 
-var Aggr = Aggregator{}
+var Aggr = Aggregator{Lock: sync.Mutex{}}
 
 type Aggregator struct {
 	Cache string
 	Lock  sync.Mutex
-}
-
-func (this *Aggregator) Init() {
-	this.Lock = sync.Mutex{}
 }
 
 func (this *Aggregator) Add(csv string) {
