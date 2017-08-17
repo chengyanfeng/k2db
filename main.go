@@ -10,6 +10,7 @@ import (
 	. "k2db/task"
 	. "k2db/util"
 	"log"
+
 	"os"
 	"os/signal"
 	"time"
@@ -17,6 +18,8 @@ import (
 	"runtime"
 	"github.com/nats-io/go-nats"
 	"github.com/jinzhu/gorm"
+	"io/ioutil"
+	"fmt"
 )
 
 func main() {
@@ -86,6 +89,30 @@ func InsertDb(v P)  {
 		v["time_inter"], v["userid"], v["spid"], v["flow_rate"])
 
 }
+
+
+func tocsv(v P){
+	var wireteString string
+	var filename = "D:\\data\\output1.csv";
+	wireteString=v["time_inter"]+","+ v["userid"]+","+ v["spid"]+","+v["flow_rate"]+"\n"
+	if len(wireteString)>100000{
+		var d1 = []byte(wireteString);
+		err2 := ioutil.WriteFile(filename, d1, 0644)  //写入文件(字节数组)
+		if err2==nil{
+			fmt.Println("创建并文件输入内容")
+		}
+		err:= ioutil.WriteFile(filename,[]byte(""),0644)
+		if err==nil{
+			fmt.Println(wireteString)
+			wireteString=""
+			fmt.Println("清空文件")
+		}
+	}
+
+
+}
+
+
 
 func consume(topic string, f func(msg *ConsumerMessage)) {
 	go AutoSaveOffset(topic)
