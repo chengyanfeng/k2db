@@ -17,11 +17,11 @@ import (
 	"encoding/json"
 	"runtime"
 	"github.com/nats-io/go-nats"
-	"github.com/jinzhu/gorm"
+	//"github.com/jinzhu/gorm"
 	"io/ioutil"
 	"fmt"
 )
-
+var wireteString string
 func main() {
 	initConf()
 	beego.BConfig.Listen.HTTPPort = ToInt(Trim(os.Getenv("port")), 7877)
@@ -32,13 +32,13 @@ func main() {
 	//beego.SetLogger("file", `{"filename":"logs/run.log"}`)
 	//beego.BeeLogger.SetLogFuncCallDepth(4)
 	LocalDb, _ = scribble.New("log", nil)
-	var err error
+	//var err error
 	// todo 配置通过文件读取
-	Citus, err = gorm.Open("postgres", CITUS_PARA)
+	/*Citus, err = gorm.Open("postgres", CITUS_PARA)
 	defer Citus.Close()
 	if err != nil {
 		panic(err)
-	}
+	}*/
 	go Natscn()
 	beego.Run()
 }
@@ -67,7 +67,8 @@ func Natscn(){
 	//	InsertDb(*p)
 	//	go InsertDb(p)
 		Dhq <- func() {
-			 tocsv(p)
+			fmt.Println("-----------------------")
+			 tocsv(*p)
 		}
 	})
 
@@ -93,11 +94,14 @@ func InsertDb(v P)  {
 
 }
 
-
+var n int
 func tocsv(v P){
-	var wireteString string
-	wireteString=v["time_inter"]+","+ v["userid"]+","+ v["spid"]+","+v["flow_rate"]+"\n"
-	if len(wireteString)>1000000{
+	n=n+1
+	fmt.Println("--------这是条数--------------")
+	fmt.Println(n)
+	wireteString= ToString(v["time_inter"])+","+ ToString(v["userid"])+","+ToString( v["spid"])+","+ToString(v["flow_rate"])+"\n"
+	//每隔10kb 数据发送一次csv
+	if len(wireteString)>10000{
 		var d1 = []byte(wireteString);
 		err2 := ioutil.WriteFile(CSVPATH, d1, 0644)
 		if err2==nil{
@@ -106,7 +110,7 @@ func tocsv(v P){
 		}
 		err:= ioutil.WriteFile(CSVPATH,[]byte(""),0644)
 		if err==nil{
-			fmt.Println(wireteString)
+
 			wireteString=""
 			fmt.Println("清空文件")
 		}
@@ -156,7 +160,7 @@ ConsumerLoop:
 func Csv2Db(file string) error {
 	Debug("Csv2Db", file)
 	pg := Postgre{}
-	_, e := pg.LoadCsv(file, "access", ",")
+	_, e := pg.LoadCsv(file, "flow", ",")
 	return e
 }
 func initConsumer() {
