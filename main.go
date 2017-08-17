@@ -106,7 +106,7 @@ func tocsv(v P){
 		err2 := ioutil.WriteFile(CSVPATH, d1, 0644)
 		if err2==nil{
 			fmt.Println("创建并文件输入内容")
-			Csv2Db(CSVPATH)
+			//Csv2Db(CSVPATH)
 		}
 		err:= ioutil.WriteFile(CSVPATH,[]byte(""),0644)
 		if err==nil{
