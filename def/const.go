@@ -21,6 +21,8 @@ var URL string
 var NATS_PARA string
 var CITUS_PARA string
 var SUBJ string
+var CSVPATH string
+var TABLE string
 const (
 	Cname string = "job"
 )

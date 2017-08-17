@@ -48,6 +48,9 @@ func initConf(){
 	NATS_PARA = confMap["nats_para"]
 	CITUS_PARA = confMap["citus_para"]
 	SUBJ = confMap["subj"]
+	CSVPATH =confMap["csvpath"]
+	TABLE=confMap["table"]
+
 }
 func Natscn(){
 	//server的连接
@@ -64,7 +67,7 @@ func Natscn(){
 	//	InsertDb(*p)
 	//	go InsertDb(p)
 		Dhq <- func() {
-			 InsertDb(*p)
+			 tocsv(p)
 		}
 	})
 
@@ -93,16 +96,15 @@ func InsertDb(v P)  {
 
 func tocsv(v P){
 	var wireteString string
-	var filename = "D:\\data\\output1.csv";
 	wireteString=v["time_inter"]+","+ v["userid"]+","+ v["spid"]+","+v["flow_rate"]+"\n"
-	if len(wireteString)>100000{
+	if len(wireteString)>1000000{
 		var d1 = []byte(wireteString);
-		err2 := ioutil.WriteFile(filename, d1, 0644)  //写入文件(字节数组)
+		err2 := ioutil.WriteFile(CSVPATH, d1, 0644)
 		if err2==nil{
 			fmt.Println("创建并文件输入内容")
-			LoadCsv(filename)
+			Csv2Db(CSVPATH)
 		}
-		err:= ioutil.WriteFile(filename,[]byte(""),0644)
+		err:= ioutil.WriteFile(CSVPATH,[]byte(""),0644)
 		if err==nil{
 			fmt.Println(wireteString)
 			wireteString=""
@@ -151,7 +153,12 @@ ConsumerLoop:
 		}
 	}
 }
-
+func Csv2Db(file string) error {
+	Debug("Csv2Db", file)
+	pg := Postgre{}
+	_, e := pg.LoadCsv(file, "access", ",")
+	return e
+}
 func initConsumer() {
 	var err error
 	KafkaConsumer, err = NewConsumer([]string{"kafka1:9092","kafka2:9092","kafka3:9092"}, nil)
