@@ -46,7 +46,6 @@ func Natscn() {
 	}
 	// 订阅的subject
 	_, err := nc.Subscribe(SUBJ, func(msg *nats.Msg) {
-		Debug("Received a message: %s\n", string(msg.Data))
 		Consume(msg)
 	})
 
