@@ -1,3 +1,5 @@
 .idea/
 k2db
 log/
+*.csv
+*.ini
