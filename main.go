@@ -100,6 +100,7 @@ func tocsv(v P){
 		err2 := ioutil.WriteFile(filename, d1, 0644)  //写入文件(字节数组)
 		if err2==nil{
 			fmt.Println("创建并文件输入内容")
+			LoadCsv(filename)
 		}
 		err:= ioutil.WriteFile(filename,[]byte(""),0644)
 		if err==nil{
