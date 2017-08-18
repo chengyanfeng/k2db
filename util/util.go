@@ -938,3 +938,14 @@ func Invoke(any interface{}, name string, args ...interface{}) {
 	}
 	reflect.ValueOf(any).MethodByName(name).Call(inputs)
 }
+
+func AppendFile(file string, text string) {
+	f, err := os.OpenFile(file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	defer f.Close()
+	if err != nil {
+		Error(err)
+	}
+	if _, err = f.WriteString(text); err != nil {
+		Error(err)
+	}
+}

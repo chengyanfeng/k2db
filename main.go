@@ -69,16 +69,32 @@ func Consume(msg *nats.Msg) {
 func AutoCsv2Db() {
 	for {
 		data := Aggr.Dump()
-		if !IsEmpty(data) {
-			WriteFile(CsvFile, []byte(data))
-			err := Csv2Db(CsvFile)
-			if err != nil {
-				Error(err)
-			}
-		}
+		go dump2db(data)
 		Debug("count", count)
-		time.Sleep(10 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
+}
+
+func dump2db(data []string) {
+	if !IsEmpty(data) {
+		file := JoinStr("flow", Timestamp(), ".csv")
+		for _, v := range data {
+			Msg2Csv(file, v)
+		}
+		err := Csv2Db(file)
+		if err != nil {
+			Error(err)
+		} else {
+			DeleteFile(file)
+		}
+	}
+}
+
+func Msg2Csv(file string, msg string) {
+	if !EndsWith(msg, "\n") {
+		msg = msg + "\n"
+	}
+	AppendFile(file, msg)
 }
 
 func Csv2Db(file string) error {
